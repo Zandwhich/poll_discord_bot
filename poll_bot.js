@@ -2,6 +2,15 @@
 
 // This code was inspired from:
 // https://www.digitaltrends.com/gaming/how-to-make-a-discord-bot/
+
+
+// Imports
+var Discord = require('discord.io')
+var logger = require('winston')
+var auth = require('./auth.json')
+var package = require('./package.json')
+
+// Enum for error codes
 const errorCodes = {
     BAD:           0,
     BADDER:        1,
@@ -9,22 +18,21 @@ const errorCodes = {
     MISSING_PARAM: 3,
     DEVS_SUCK:     4
 }
-//#region imports
-var Discord = require('discord.io')
-var logger = require('winston')
-var auth = require('./auth.json')
-// var accounts = require('./accounts.json')
-var package = require('./package.json')
-//#endregion imports
 
-// For @ people in the chat
+/**
+ * Returns text that will mention a user
+ * @param {*} userID The user which to mention
+ */
 function mentionUser(userID) {
     return '<@' + userID + '>'
 }
 
 /**
-* Draws from a preset list of error messages depending on the ErrorCode
-*/
+ * Draws from a preset list of error messages depending on the ErrorCode
+ * @param {*} userID The user which to mention
+ * @param {*} channelID The channel to send the message in
+ * @param {errorCodes} errorCode The error code to send the appropriate message
+ */
 function errorMessage(userID, channelID, errorCode) {
     let message = (function(code) {
         switch (code) {
@@ -37,7 +45,7 @@ function errorMessage(userID, channelID, errorCode) {
             case errorCodes.MISSING_PARAM:
                 return 'You\'re missing a param, chief'
             case errorCodes.DEVS_SUCK:
-                return 'The devs suck major BBC'
+                return 'The devs suck'
             default:
                 return 'Idk what went wrong G'
         }
@@ -74,6 +82,7 @@ bot.on('ready', function (evt) {
 })
 
 
+// Sets up the bot to listen to every message sent
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     if (message.substring(0,1) == '!') {
@@ -83,7 +92,12 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 })
 
 
-// Take care of the input
+/**
+ * Takes care of the input
+ * @param {*} userID The user that sent the input
+ * @param {*} channelID The channel in which the messgae was sent
+ * @param {*} args The arguments passed in
+ */
 function handleInput(userID, channelID, args) {
 
     let cmd = args[0]
@@ -117,7 +131,13 @@ function handleInput(userID, channelID, args) {
     }
 }
 
-// Handle creating a new poll
+
+/**
+ * Handles creating a new poll
+ * @param {*} userID The user who started the poll
+ * @param {*} channelID The channel in which the poll is started
+ * @param {*} args The arguments to go along with the poll
+ */
 function handleNewPoll(userID, channelID, args) {
     switch (args.length) {
         case 0:
@@ -127,20 +147,26 @@ function handleNewPoll(userID, channelID, args) {
             // TODO: actually make a poll
             bot.sendMessage({
                 to: channelID,
-                message: mentionUser(userID) + ' ' + 'fam you can\'t make pills yet'
+                message: mentionUser(userID) + ' ' + 'fam you can\'t make polls yet'
             })
             return
         default:
             // TODO: starter options for new poll
             bot.sendMessage({
                 to: channelID,
-                message: mentionUser(userID) + ' ' + 'fam you can\'t customize pills yet'
+                message: mentionUser(userID) + ' ' + 'fam you can\'t customize polls yet'
             })
             return
     }
 }
 
-// Handle ending a poll
+
+/**
+ * Handles ending a poll
+ * @param {*} userID The user that ended the poll
+ * @param {*} channelID The channel in which the poll is taking place
+ * @param {*} args The arguments about the poll
+ */
 function handleEndPoll(userID, channelID, args) {
     errorMessage(userID, channelID, errorCodes.DEVS_SUCK)
 }
