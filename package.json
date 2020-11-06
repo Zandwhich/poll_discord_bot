@@ -5,6 +5,8 @@
     "main": "poll_bot.js",
     "author": "Alex Zdanowicz and Shengbo Jia (with love from Manik Kumar and Kyle Guthrie <3)",
     "dependencies": {
-        "eslint": "^7.12.1"
+        "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+        "eslint": "^7.12.1",
+        "winston": "^3.3.3"
     }
 }
