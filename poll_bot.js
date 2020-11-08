@@ -9,7 +9,7 @@ var Discord = require('discord.io')
 var logger = require('winston')
 var auth = require('./auth.json')
 var package = require('./package.json')
-let ERROR_CODES = require('./ERROR_CODES.json')
+let ERROR_CODES = require('./enums/ERROR_CODES.json')
 
 /**
  * Returns text that will mention a user
