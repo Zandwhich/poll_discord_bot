@@ -5,11 +5,19 @@
 
 
 // Imports
-let Discord = require('discord.io')
-let logger = require('winston')
-let auth = require('./auth.json')
-let package = require('./package.json')
-let ERROR_CODES = require('./enums/ERROR_CODES.json')
+const Discord = require('discord.io')
+const logger = require('winston')
+const fs = require('fs')
+
+// Node.JS imports
+const package = require('./package.json')
+
+// Project imports
+const auth = require('./auth.json')
+const polls = require('./polls.json')
+
+// Enums
+const ERROR_CODES = require('./enums/ERROR_CODES.json')
 
 
 
@@ -43,6 +51,10 @@ function errorMessage(userID, channelID, errorCode) {
                 return 'The devs suck'
             case ERROR_CODES.UNKNOWN_PARAM:
                 return 'Fam, you passed in a wack param'
+            case ERROR_CODES.POLL_EXISTS:
+                return 'Bruh, a poll with that name already exists'
+            case ERROR_CODES.POLL_NOT_EXISTS:
+                return 'Bruh, a poll with that name doesn\'t exist'
             default:
                 return 'Idk what went wrong G'
         }
@@ -52,6 +64,36 @@ function errorMessage(userID, channelID, errorCode) {
         to: channelID,
         message: mentionUser(userID) + ' ' + message
     })
+}
+
+
+/**
+ * Returns the polls as a JSON object.
+ * If it doesn't exist, it creates a new one
+ * @returns {JSON} The polls as a JSON object
+ */
+function getPolls() {
+    try {
+        return JSON.parse(fs.readFileSync('./polls.json'))
+    } catch (error) {
+        // TODO: Figure out what the hell to do when you can't read the file
+        errorMessage()
+    }
+}
+
+
+/**
+ * Returns true if the poll exists for this channel, false otherwise
+ * @param {string} name The name of the poll
+ * @param {*} channelID The ID of the channel
+ * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
+ */
+function checkIfPollExists(name, channelID) {
+    const polls = getPolls()
+
+    if (polls == {}) {
+        // TODO: Figure out how to check if JSON object is empty correctly
+    }
 }
 
 
@@ -140,7 +182,6 @@ function handleEndPoll(userID, channelID, args) {
  * MAIN CODE *
  * ********* */
 
-
 // Configure logger settings
 logger.remove(logger.transports.Console)
 logger.add(new logger.transports.Console, {
@@ -149,7 +190,7 @@ logger.add(new logger.transports.Console, {
 logger.level = 'debug'
 
 // Initialize Discord Bot
-var bot = new Discord.Client({
+const bot = new Discord.Client({
     token: auth.token,
     autorun: true
 })

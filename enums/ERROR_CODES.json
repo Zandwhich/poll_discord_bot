@@ -4,5 +4,8 @@
     "BADDEST": 2,
     "MISSING_PARAM": 3,
     "DEVS_SUCK": 4,
-    "UNKNOWN_PARAM": 5
+    "UNKNOWN_PARAM": 5,
+    "POLL_EXISTS": 6,
+    "POLL_NOT_EXISTS": 7,
+    "CANT_READ_FILE": 8
 }
