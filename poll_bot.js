@@ -13,7 +13,6 @@ let ERROR_CODES = require('./enums/ERROR_CODES.json')
 
 
 
-
 /**
  * Returns text that will mention a user
  * @param {*} userID The user which to mention
