@@ -84,16 +84,30 @@ function getPolls() {
 
 /**
  * Returns true if the poll exists for this channel, false otherwise
- * @param {string} name The name of the poll
+ * @param {string} pollName The name of the poll
  * @param {*} channelID The ID of the channel
  * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
  */
-function checkIfPollExists(name, channelID) {
+function checkIfPollExists(pollName, channelID) {
     const polls = getPolls()
 
     if (polls == {}) {
         // TODO: Figure out how to check if JSON object is empty correctly
     }
+}
+
+
+/**
+ * Creates the poll if one with the same name doesn't already exist in this channel
+ * TODO: Decide if we are going to be returning error values or not
+ * @param {string} pollName The name of the poll
+ * @param {*} userID The user that is creating the poll
+ * @param {*} channelID The channel in which the poll is being created
+ */
+function createNewPoll(pollName, userID, channelID) {
+    // TODO: Check if the poll exists; if it does, message an error @ the user and return
+
+    // TODO: Create the poll
 }
 
 
