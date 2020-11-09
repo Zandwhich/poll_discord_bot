@@ -19,6 +19,9 @@ const errorCodes = {
     DEVS_SUCK:     4
 }
 
+
+
+
 /**
  * Returns text that will mention a user
  * @param {*} userID The user which to mention
@@ -26,6 +29,7 @@ const errorCodes = {
 function mentionUser(userID) {
     return '<@' + userID + '>'
 }
+
 
 /**
  * Draws from a preset list of error messages depending on the ErrorCode
@@ -56,40 +60,6 @@ function errorMessage(userID, channelID, errorCode) {
         message: mentionUser(userID) + ' ' + message
     })
 }
-
-
-// Configure logger settings
-logger.remove(logger.transports.Console)
-logger.add(new logger.transports.Console, {
-    colorize: true
-})
-logger.level = 'debug'
-
-// Initialize Discord Bot
-var bot = new Discord.Client({
-    token: auth.token,
-    autorun: true
-})
-
-
-bot.on('ready', function (evt) {
-    console.log('\n')
-    logger.info(' ############################## ')
-    logger.info(' # /poll v ' + package.version + ' # ')
-    logger.info(' ############################## ')
-    console.log('\n')
-    logger.info('Connected. Logged in as: ' + bot.username + ' - (' + bot.id + ')')
-})
-
-
-// Sets up the bot to listen to every message sent
-bot.on('message', function (user, userID, channelID, message, evt) {
-    // Our bot needs to know if it will execute a command
-    if (message.substring(0,1) == '!') {
-        var args = message.substring(1).split(' ')
-        handleInput(userID, channelID, args)
-    }
-})
 
 
 /**
@@ -170,6 +140,45 @@ function handleNewPoll(userID, channelID, args) {
 function handleEndPoll(userID, channelID, args) {
     errorMessage(userID, channelID, errorCodes.DEVS_SUCK)
 }
+
+
+/* ********* *
+ * MAIN CODE *
+ * ********* */
+
+
+// Configure logger settings
+logger.remove(logger.transports.Console)
+logger.add(new logger.transports.Console, {
+    colorize: true
+})
+logger.level = 'debug'
+
+// Initialize Discord Bot
+var bot = new Discord.Client({
+    token: auth.token,
+    autorun: true
+})
+
+
+bot.on('ready', function (evt) {
+    console.log('\n')
+    logger.info(' ############################## ')
+    logger.info(' # /poll v ' + package.version + ' # ')
+    logger.info(' ############################## ')
+    console.log('\n')
+    logger.info('Connected. Logged in as: ' + bot.username + ' - (' + bot.id + ')')
+})
+
+
+// Sets up the bot to listen to every message sent
+bot.on('message', function (user, userID, channelID, message, evt) {
+    // Our bot needs to know if it will execute a command
+    if (message.substring(0,1) == '!') {
+        var args = message.substring(1).split(' ')
+        handleInput(userID, channelID, args)
+    }
+})
 
 
 
