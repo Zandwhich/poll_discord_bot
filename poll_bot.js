@@ -173,30 +173,3 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         handleInput(userID, channelID, args)
     }
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// /poll new varargs categories
-// --> @kylebgu3 started a new poll: NAME
-// -->
-// /poll end NAME
