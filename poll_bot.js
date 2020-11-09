@@ -14,7 +14,6 @@ const package = require('./package.json')
 
 // Project imports
 const auth = require('./auth.json')
-const polls = require('./polls.json')
 
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
