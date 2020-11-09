@@ -1,0 +1,8 @@
+{
+    "BAD": 0,
+    "BADDER": 1,
+    "BADDEST": 2,
+    "MISSING_PARAM": 3,
+    "DEVS_SUCK": 4,
+    "UNKNOWN_PARAM": 5
+}
