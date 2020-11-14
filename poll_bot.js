@@ -67,7 +67,7 @@ function errorMessage(userID, channelID, errorCode) {
 
 
 /**
- * Returns the polls as a JSON object.
+ * Returns all of the polls as a JSON object.
  * If it doesn't exist, it creates a new one
  * @returns {JSON} The polls as a JSON object
  */
@@ -76,7 +76,6 @@ function getPolls() {
         return JSON.parse(fs.readFileSync('./polls.json'))
     } catch (error) {
         // TODO: Figure out what the hell to do when you can't read the file
-        errorMessage()
     }
 }
 
@@ -87,12 +86,19 @@ function getPolls() {
  * @param {*} channelID The ID of the channel
  * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
  */
-function checkIfPollExists(pollName, channelID) {
+function doesPollExists(pollName, channelID) {
     const polls = getPolls()
 
-    if (polls == {}) {
-        // TODO: Figure out how to check if JSON object is empty correctly
-    }
+    // FIXME: Figure out how to correctly check if a JSON object is empty
+    if (polls == {}) return false
+
+    // FIXME: Figure out how to correctly check if there is no channel id in a JSON object
+    if (polls.channelID == null) return false
+
+    // FIXME: Figure out how to correctly check if there is no poll name in a JSON object
+    if (polls.channelID.pollName == null) return false
+
+    return true
 }
 
 
@@ -104,7 +110,11 @@ function checkIfPollExists(pollName, channelID) {
  * @param {*} channelID The channel in which the poll is being created
  */
 function createNewPoll(pollName, userID, channelID) {
-    // TODO: Check if the poll exists; if it does, message an error @ the user and return
+    if (doesPollExists(pollName, channelID))
+    {
+        errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
+        return
+    }
 
     // TODO: Create the poll
 }
@@ -138,9 +148,11 @@ function handleInput(userID, channelID, args) {
     args = args.splice(1)
 
     switch (cmd) {
+        case 'create':
         case 'new':
             handleNewPoll(userID, channelID, args)
             break
+        case 'finish':
         case 'end':
             handleEndPoll(userID, channelID, args)
             break
