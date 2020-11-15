@@ -18,7 +18,8 @@ const auth = require('./auth.json')
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
 
-const POLL_FILENAME = "./polls.json"
+// The filename of the JSON that holds all of the polls
+const POLL_FILENAME = "./polls_active.json"
 
 
 /**
@@ -87,7 +88,7 @@ function getPolls() {
  * @param {*} channelID The ID of the channel
  * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
  */
-function doesPollExists(pollName, channelID) {
+function doesPollExist(pollName, channelID) {
     const polls = getPolls()
 
     // FIXME: Figure out how to correctly check if a JSON object is empty
@@ -104,31 +105,51 @@ function doesPollExists(pollName, channelID) {
 
 
 /**
+ * Checks to see if the channel sub-object has been created; if not, creates it
+ * @param {*} channelID The ID of the channel
+ */
+function createChannelSubObjectIfNeeded(channelID)
+{
+    let polls = getPolls();
+
+    // FIXME: Figure out how to correctly check if a JSON object doesn't exist
+    if (polls[channelID] == null) polls[channelID] = {};
+}
+
+
+/**
  * Creates the poll if one with the same name doesn't already exist in this channel
  * TODO: Decide if we are going to be returning error values or not
  * @param {string} pollName The name of the poll
  * @param {*} userID The user that is creating the poll
  * @param {*} channelID The channel in which the poll is being created
+ * @param {HTMLAllCollection} options The options for the poll
  */
-function createNewPoll(pollName, userID, channelID) {
-    if (doesPollExists(pollName, channelID))
+function createNewPoll(pollName, userID, channelID, options = []) {
+    if (doesPollExist(pollName, channelID))
     {
         errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
         return
     }
 
     // Get the polls object with all of the polls
-    let polls = getPolls();
+    let polls = getPolls()
 
     // Create a new empty poll
-    polls[channelID][pollName] = {};
+    polls[channelID][pollName] = {}
+    polls[channelID][pollName]['options'] = {}
+
+    // Set all of the options to the options passed in
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i]
+        polls[channelID][pollName]['options']['option_' + i] = option
+    }
 
     try {
-        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls));
+        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls))
     } catch (error) {
         // TODO: Idk, actually do something with the error?
     }
-    
 }
 
 
