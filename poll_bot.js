@@ -18,6 +18,7 @@ const auth = require('./auth.json')
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
 
+const POLL_FILENAME = "./polls.json"
 
 
 /**
@@ -73,7 +74,7 @@ function errorMessage(userID, channelID, errorCode) {
  */
 function getPolls() {
     try {
-        return JSON.parse(fs.readFileSync('./polls.json'))
+        return JSON.parse(fs.readFileSync(POLL_FILENAME))
     } catch (error) {
         // TODO: Figure out what the hell to do when you can't read the file
     }
@@ -93,10 +94,10 @@ function doesPollExists(pollName, channelID) {
     if (polls == {}) return false
 
     // FIXME: Figure out how to correctly check if there is no channel id in a JSON object
-    if (polls.channelID == null) return false
+    if (polls[channelID] == null) return false
 
     // FIXME: Figure out how to correctly check if there is no poll name in a JSON object
-    if (polls.channelID.pollName == null) return false
+    if (polls[channelID][pollName] == null) return false
 
     return true
 }
@@ -116,7 +117,18 @@ function createNewPoll(pollName, userID, channelID) {
         return
     }
 
-    // TODO: Create the poll
+    // Get the polls object with all of the polls
+    let polls = getPolls();
+
+    // Create a new empty poll
+    polls[channelID][pollName] = {};
+
+    try {
+        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls));
+    } catch (error) {
+        // TODO: Idk, actually do something with the error?
+    }
+    
 }
 
 
