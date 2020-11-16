@@ -18,8 +18,11 @@ const auth = require('./auth.json')
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
 
-// The filename of the JSON that holds all of the polls
-const POLL_FILENAME = "./polls_active.json"
+// The filename of the JSON that holds all of the active polls
+const POLLS_ACTIVE_FILENAME = "./polls_active.json"
+
+// The filename of the JSON that holds all of the finished polls
+const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 
 
 /**
@@ -77,7 +80,7 @@ function errorMessage(userID, channelID, errorCode) {
 function getActivePolls(channelID) {
     let polls 
     try {
-        polls = JSON.parse(fs.readFileSync(POLL_FILENAME))
+        polls = JSON.parse(fs.readFileSync(POLLS_ACTIVE_FILENAME))
     } catch (error) {
         // TODO: Figure out what the hell to do when you can't read the file
     }
@@ -86,6 +89,19 @@ function getActivePolls(channelID) {
     if (polls[channelID] == undefined) polls[channelID] = {}
  
     return polls
+}
+
+/**
+ * Saves the passed-in polls data in the polls file
+ * @param {JSON} polls The polls data in the JSON format
+ */
+function saveActivePolls(polls)
+{
+    try {
+        fs.writeFileSync(POLLS_ACTIVE_FILENAME, JSON.stringify(polls, null, '\t'))
+    } catch(error) {
+        // TODO: Figure out what the hell to do with the error
+    }
 }
 
 
@@ -97,25 +113,7 @@ function getActivePolls(channelID) {
  */
 function doesPollExist(pollName, channelID) {
     const polls = getActivePolls(channelID)
-
-    // FIXME: Figure out how to correctly check if there is no poll name in a JSON object
-    if (polls[channelID][pollName] == undefined || polls[channelID][pollName] == {}) return false
-
-    return true
-}
-
-
-/**
- * Saves the passed-in polls data in the polls file
- * @param {JSON} polls The polls data in the JSON format
- */
-function savePolls(polls)
-{
-    try {
-        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls, null, '\t'))
-    } catch(error) {
-        // TODO: Figure out what the hell to do with the error
-    }
+    return !(polls[channelID][pollName] == undefined)
 }
 
 
@@ -143,7 +141,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     polls[channelID][pollName]               = {}
     polls[channelID][pollName]['options']    = {}
     polls[channelID][pollName]['time_start'] = Date.now()
-    polls[channelID][pollName]['time_end']   = ''
+    polls[channelID][pollName]['time_end']   = -1
     polls[channelID][pollName]['owner']      = userID
 
     // Set all of the options to the options passed in
@@ -152,7 +150,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
         polls[channelID][pollName]['options']['option_' + i] = option
     }
 
-    savePolls(polls);
+    saveActivePolls(polls);
 }
 
 
@@ -259,7 +257,6 @@ bot.on('ready', function (evt) {
 
 // Sets up the bot to listen to every message sent
 bot.on('message', function (user, userID, channelID, message, evt) {
-    console.log('channelID: ' + channelID)
 
     // Our bot needs to know if it will execute a command
     if (message.substring(0,1) == '!') {
