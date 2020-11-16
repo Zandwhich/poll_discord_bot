@@ -116,6 +116,19 @@ function doesPollExist(pollName, channelID) {
     return !(polls[channelID][pollName] == undefined)
 }
 
+/**
+ * Checks to see if all of the options exist in the poll
+ * @param {string} pollName The name of the poll
+ * @param {string[]} options The options to see if exist
+ * @param {string} channelID The channel in which the poll exists
+ * @returns {boolean} true if all exist; false otherwise
+ */
+function doOptionsExistInPoll(pollName, options, channelID) {
+    if (!doesPollExist(pollName, channelID)) return false
+
+    // TODO: FIXME: TODO: FIXME: This is where you left off
+}
+
 
 /**
  * Creates the poll if one with the same name doesn't already exist in this channel
@@ -146,11 +159,23 @@ function createNewPoll(pollName, userID, channelID, options = []) {
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
-        const option = options[i]
+        const option = options[i].toLowerCase()
         polls[channelID][pollName]['options'].push({"name":option, "votes":[]})
     }
 
     saveActivePolls(polls);
+}
+
+
+/**
+ * Votes in the poll with the given options
+ * @param {string} pollName The name of the poll in which to vote
+ * @param {string[]} options The options to vote for in the poll
+ * @param {string} userID The id of the user
+ * @param {string} channelID the id of the channel
+ */
+function voteInPoll(pollName, options, userID, channelID) {
+
 }
 
 
@@ -204,8 +229,9 @@ function handleInput(userID, channelID, args) {
  * @param {*} args The arguments to go along with the poll
  */
 function handleNewPoll(userID, channelID, args) {
+    // Check to see if correct arguments were passed in
     if (args.length == 0) {
-        errorMessage(usreID, channelID, ERROR_CODES.MISSING_PARAM)
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
         return
     }
 
@@ -213,6 +239,26 @@ function handleNewPoll(userID, channelID, args) {
     args = args.splice(1)
 
     createNewPoll(name, userID, channelID, args)
+}
+
+
+/**
+ * Handles voting in a poll
+ * @param {*} userID The user who is voting
+ * @param {*} channelID The channel in which poll is
+ * @param {*} args The arguments for voting
+ */
+function handleVoting(userID, channelID, args) {
+    // Check to see if correct arguments were passed in
+    if (args.length < 2) {
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    const pollName   = args[0].toLowerCase()
+    args = args.splice(1)
+
+    voteInPoll(pollName, args, userID, channelID)
 }
 
 
