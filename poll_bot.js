@@ -69,16 +69,23 @@ function errorMessage(userID, channelID, errorCode) {
 
 
 /**
- * Returns all of the polls as a JSON object.
+ * Returns all of the active polls as a JSON object.
  * If it doesn't exist, it creates a new one
+ * @param {*} channelID The channel in which this poll is taking place
  * @returns {JSON} The polls as a JSON object
  */
-function getPolls() {
+function getActivePolls(channelID) {
+    let polls 
     try {
-        return JSON.parse(fs.readFileSync(POLL_FILENAME))
+        polls = JSON.parse(fs.readFileSync(POLL_FILENAME))
     } catch (error) {
         // TODO: Figure out what the hell to do when you can't read the file
     }
+
+    if (polls == undefined) polls = {}
+    if (polls[channelID] == undefined) polls[channelID] = {}
+ 
+    return polls
 }
 
 
@@ -89,31 +96,26 @@ function getPolls() {
  * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
  */
 function doesPollExist(pollName, channelID) {
-    const polls = getPolls()
-
-    // FIXME: Figure out how to correctly check if a JSON object is empty
-    if (polls == {}) return false
-
-    // FIXME: Figure out how to correctly check if there is no channel id in a JSON object
-    if (polls[channelID] == null) return false
+    const polls = getActivePolls(channelID)
 
     // FIXME: Figure out how to correctly check if there is no poll name in a JSON object
-    if (polls[channelID][pollName] == null) return false
+    if (polls[channelID][pollName] == undefined || polls[channelID][pollName] == {}) return false
 
     return true
 }
 
 
 /**
- * Checks to see if the channel sub-object has been created; if not, creates it
- * @param {*} channelID The ID of the channel
+ * Saves the passed-in polls data in the polls file
+ * @param {JSON} polls The polls data in the JSON format
  */
-function createChannelSubObjectIfNeeded(channelID)
+function savePolls(polls)
 {
-    let polls = getPolls();
-
-    // FIXME: Figure out how to correctly check if a JSON object doesn't exist
-    if (polls[channelID] == null) polls[channelID] = {};
+    try {
+        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls, null, '\t'))
+    } catch(error) {
+        // TODO: Figure out what the hell to do with the error
+    }
 }
 
 
@@ -126,18 +128,23 @@ function createChannelSubObjectIfNeeded(channelID)
  * @param {HTMLAllCollection} options The options for the poll
  */
 function createNewPoll(pollName, userID, channelID, options = []) {
+
+    // Check if this poll already exists; if it does, throw an error
     if (doesPollExist(pollName, channelID))
     {
         errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
-        return
+        return    
     }
 
     // Get the polls object with all of the polls
-    let polls = getPolls()
+    let polls = getActivePolls(channelID)
 
     // Create a new empty poll
-    polls[channelID][pollName] = {}
-    polls[channelID][pollName]['options'] = {}
+    polls[channelID][pollName]               = {}
+    polls[channelID][pollName]['options']    = {}
+    polls[channelID][pollName]['time_start'] = Date.now()
+    polls[channelID][pollName]['time_end']   = ''
+    polls[channelID][pollName]['owner']      = userID
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
@@ -145,11 +152,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
         polls[channelID][pollName]['options']['option_' + i] = option
     }
 
-    try {
-        fs.writeFileSync(POLL_FILENAME, JSON.stringify(polls))
-    } catch (error) {
-        // TODO: Idk, actually do something with the error?
-    }
+    savePolls(polls);
 }
 
 
@@ -203,25 +206,15 @@ function handleInput(userID, channelID, args) {
  * @param {*} args The arguments to go along with the poll
  */
 function handleNewPoll(userID, channelID, args) {
-    switch (args.length) {
-        case 0:
-            errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
-            return
-        case 1:
-            // TODO: actually make a poll
-            bot.sendMessage({
-                to: channelID,
-                message: mentionUser(userID) + ' ' + 'fam you can\'t make polls yet'
-            })
-            return
-        default:
-            // TODO: starter options for new poll
-            bot.sendMessage({
-                to: channelID,
-                message: mentionUser(userID) + ' ' + 'fam you can\'t customize polls yet'
-            })
-            return
+    if (args.length == 0) {
+        errorMessage(usreID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
     }
+
+    const name = args[0].toLowerCase()
+    args = args.splice(1)
+
+    createNewPoll(name, userID, channelID, args)
 }
 
 
@@ -266,6 +259,8 @@ bot.on('ready', function (evt) {
 
 // Sets up the bot to listen to every message sent
 bot.on('message', function (user, userID, channelID, message, evt) {
+    console.log('channelID: ' + channelID)
+
     // Our bot needs to know if it will execute a command
     if (message.substring(0,1) == '!') {
         var args = message.substring(1).split(' ')
