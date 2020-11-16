@@ -148,7 +148,6 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     for (let i = 0; i < options.length; i++) {
         const option = options[i]
         polls[channelID][pollName]['options'].push({"name":option, "votes":[]})
-
     }
 
     saveActivePolls(polls);
