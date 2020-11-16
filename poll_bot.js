@@ -139,7 +139,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
 
     // Create a new empty poll
     polls[channelID][pollName]               = {}
-    polls[channelID][pollName]['options']    = {}
+    polls[channelID][pollName]['options']    = []
     polls[channelID][pollName]['time_start'] = Date.now()
     polls[channelID][pollName]['time_end']   = -1
     polls[channelID][pollName]['owner']      = userID
@@ -147,7 +147,8 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
         const option = options[i]
-        polls[channelID][pollName]['options']['option_' + i] = option
+        polls[channelID][pollName]['options'].push({"name":option, "votes":[]})
+
     }
 
     saveActivePolls(polls);
