@@ -127,6 +127,8 @@ function doOptionsExistInPoll(pollName, options, channelID) {
     if (!doesPollExist(pollName, channelID)) return false
 
     // TODO: FIXME: TODO: FIXME: This is where you left off
+
+    // TODO: Figure out how to compare the two arrays in not O(n^2) time
 }
 
 
