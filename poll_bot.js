@@ -17,6 +17,7 @@ const auth = require('./auth.json')
 
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
+const { Z_VERSION_ERROR } = require('zlib')
 
 // The filename of the JSON that holds all of the active polls
 const POLLS_ACTIVE_FILENAME = "./polls_active.json"
@@ -39,9 +40,10 @@ function mentionUser(userID) {
  * @param {*} userID The user which to mention
  * @param {*} channelID The channel to send the message in
  * @param {ERROR_CODES} errorCode The error code to send the appropriate message
+ * @param {string[]} args Any additional argument(s) for the given error message
  */
-function errorMessage(userID, channelID, errorCode) {
-    let message = (function(code) {
+function errorMessage(userID, channelID, errorCode, args = ['']) {
+    let message = (function(code, args) {
         switch (code) {
             case ERROR_CODES.BADDEST:
                 return 'Uh oh, you did a fucky wucky'
@@ -59,10 +61,14 @@ function errorMessage(userID, channelID, errorCode) {
                 return 'Bruh, a poll with that name already exists'
             case ERROR_CODES.POLL_NOT_EXISTS:
                 return 'Bruh, a poll with that name doesn\'t exist'
+            case ERROR_CODES.OPTION_EXISTS:
+                return 'Dude, ' + args[0] + ' is already an option'
+            case ERROR_CODES.OPTION_NOT_EXISTS:
+                return 'Dude, ' + args[0] + ' is not a valid option'
             default:
                 return 'Idk what went wrong G'
         }
-    })(errorCode)
+    })(errorCode, args)
 
     bot.sendMessage({
         to: channelID,
@@ -91,6 +97,7 @@ function getActivePolls(channelID) {
     return polls
 }
 
+
 /**
  * Saves the passed-in polls data in the polls file
  * @param {JSON} polls The polls data in the JSON format
@@ -106,29 +113,36 @@ function saveActivePolls(polls)
 
 
 /**
- * Returns true if the poll exists for this channel, false otherwise
+ * Returns the JSON the poll if it exists for this channel, false otherwise
  * @param {string} pollName The name of the poll
- * @param {*} channelID The ID of the channel
- * @returns {boolean} true if the given poll exists for the given channelID, false otherwise
+ * @param {string} channelID The ID of the channel
+ * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
  */
-function doesPollExist(pollName, channelID) {
+function getPoll(pollName, channelID) {
     const polls = getActivePolls(channelID)
-    return !(polls[channelID][pollName] == undefined)
+    return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
 }
 
+
 /**
- * Checks to see if all of the options exist in the poll
+ * Returns true if a given option exists in a poll; false otherwise
  * @param {string} pollName The name of the poll
- * @param {string[]} options The options to see if exist
- * @param {string} channelID The channel in which the poll exists
- * @returns {boolean} true if all exist; false otherwise
+ * @param {string} option The option to check
+ * @param {string} channelID The ID of the channel
+ * @returns {boolean} true if the given option exists in a poll; false otherwise
  */
-function doOptionsExistInPoll(pollName, options, channelID) {
-    if (!doesPollExist(pollName, channelID)) return false
+function doesOptionExistInPoll(pollName, option, channelID) {
+    // If the poll itself doesn't exist, then return false
+    const poll = getPoll(pollName, channelID);
+    if (poll == false) return false
 
-    // TODO: FIXME: TODO: FIXME: This is where you left off
+    const options = poll['options']
 
-    // TODO: Figure out how to compare the two arrays in not O(n^2) time
+    options.forEach(element => {
+        console.log(element['name'])
+        if (element['name'] == option) return true
+    });
+    return false
 }
 
 
@@ -143,8 +157,7 @@ function doOptionsExistInPoll(pollName, options, channelID) {
 function createNewPoll(pollName, userID, channelID, options = []) {
 
     // Check if this poll already exists; if it does, throw an error
-    if (doesPollExist(pollName, channelID))
-    {
+    if (getPoll(pollName, channelID) != false) {
         errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
         return    
     }
@@ -158,6 +171,8 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     polls[channelID][pollName]['time_start'] = Date.now()
     polls[channelID][pollName]['time_end']   = -1
     polls[channelID][pollName]['owner']      = userID
+    polls[channelID][pollName]['settings']   = []
+    polls[channelID][pollName]['votes']      = []
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
@@ -177,7 +192,24 @@ function createNewPoll(pollName, userID, channelID, options = []) {
  * @param {string} channelID the id of the channel
  */
 function voteInPoll(pollName, options, userID, channelID) {
+    if (!getPoll(pollName, channelID)) {
+        errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
+        return
+    }
 
+    let poll = getPoll(pollName, channelID)
+
+    options.forEach(option => {
+        if (!doesOptionExistInPoll(pollName, option, channelID)) {
+            errorMessage(userID, channelID, ERROR_CODES.OPTION_NOT_EXISTS, [option])
+        } else {
+            let vote = new JSON()
+            vote['user'] = userID
+            vote['time'] = Date.now()
+
+            poll['options'].push(vote)
+        }
+    });
 }
 
 
@@ -216,6 +248,10 @@ function handleInput(userID, channelID, args) {
         case 'finish':
         case 'end':
             handleEndPoll(userID, channelID, args)
+            break
+        case 'vote':
+        case 'option':
+            handleVoting(userID, channelID, args)
             break
         default:
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)
@@ -257,7 +293,7 @@ function handleVoting(userID, channelID, args) {
         return
     }
 
-    const pollName   = args[0].toLowerCase()
+    const pollName = args[0].toLowerCase()
     args = args.splice(1)
 
     voteInPoll(pollName, args, userID, channelID)
