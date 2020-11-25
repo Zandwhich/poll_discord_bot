@@ -76,6 +76,9 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
     })
 }
 
+/* ********* *
+ * GET POLLS *
+ * ********* */
 
 /**
  * Returns all of the active polls as a JSON object.
@@ -83,7 +86,7 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
  * @param {*} channelID The channel in which this poll is taking place
  * @returns {JSON} The polls as a JSON object
  */
-function getActivePolls(channelID) {
+function getActivePollsForChannel(channelID) {
     let polls 
     try {
         polls = JSON.parse(fs.readFileSync(POLLS_ACTIVE_FILENAME))
@@ -99,10 +102,40 @@ function getActivePolls(channelID) {
 
 
 /**
+ * Returns all of the polls in the JSON (including all outside of the channel)
+ * NOTE: To be used mostly with saving
+ * @returns {JSON} All of the polls as a JSON object
+ */
+function getAllActivePolls() {
+    let polls
+    try {
+        polls = JSON.parse(fs.readFileSync(POLLS_ACTIVE_FILENAME))
+    } catch (error) {
+        // TODO: Figure out what the hell to do when you can't read the file
+    }
+
+    if (polls == undefined) polls = {}
+
+    return polls
+}
+
+/**
+ * Returns the JSON the poll if it exists for this channel, false otherwise
+ * @param {string} pollName The name of the poll
+ * @param {string} channelID The ID of the channel
+ * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
+ */
+function getPoll(pollName, channelID) {
+    const polls = getActivePollsForChannel(channelID)
+    return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
+}
+
+
+/**
  * Saves the passed-in polls data in the polls file
  * @param {JSON} polls The polls data in the JSON format
  */
-function saveActivePolls(polls)
+function writeActivePolls(polls)
 {
     try {
         fs.writeFileSync(POLLS_ACTIVE_FILENAME, JSON.stringify(polls, null, '\t'))
@@ -113,14 +146,18 @@ function saveActivePolls(polls)
 
 
 /**
- * Returns the JSON the poll if it exists for this channel, false otherwise
+ * Writes the polls to the polls_active.json file
+ * @param {string} channelID The string ID for the given channel
  * @param {string} pollName The name of the poll
- * @param {string} channelID The ID of the channel
- * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
+ * @param {JSON} poll The poll as a JSON object
  */
-function getPoll(pollName, channelID) {
-    const polls = getActivePolls(channelID)
-    return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
+function saveActivePoll(channelID, pollName, poll)
+{
+    let polls = getAllActivePolls()
+
+    polls[channelID][pollName] = poll
+
+    writeActivePolls(polls)
 }
 
 
@@ -131,18 +168,18 @@ function getPoll(pollName, channelID) {
  * @param {string} channelID The ID of the channel
  * @returns {boolean} true if the given option exists in a poll; false otherwise
  */
-function doesOptionExistInPoll(pollName, option, channelID) {
+function doesOptionExistInPoll(pollName, option, channelID, userID) {
     // If the poll itself doesn't exist, then return false
     const poll = getPoll(pollName, channelID);
     if (poll == false) return false
 
     const options = poll['options']
 
+    let doesExist = false
     options.forEach(element => {
-        console.log(element['name'])
-        if (element['name'] == option) return true
+        if (element['name'] == option) doesExist = true
     });
-    return false
+    return doesExist
 }
 
 
@@ -163,7 +200,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     }
 
     // Get the polls object with all of the polls
-    let polls = getActivePolls(channelID)
+    let polls = getActivePollsForChannel(channelID)
 
     // Create a new empty poll
     polls[channelID][pollName]               = {}
@@ -180,7 +217,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
         polls[channelID][pollName]['options'].push({"name":option, "votes":[]})
     }
 
-    saveActivePolls(polls);
+    writeActivePolls(polls);
 }
 
 
@@ -200,16 +237,23 @@ function voteInPoll(pollName, options, userID, channelID) {
     let poll = getPoll(pollName, channelID)
 
     options.forEach(option => {
-        if (!doesOptionExistInPoll(pollName, option, channelID)) {
+        if (!doesOptionExistInPoll(pollName, option, channelID, userID)) {
             errorMessage(userID, channelID, ERROR_CODES.OPTION_NOT_EXISTS, [option])
         } else {
-            let vote = new JSON()
+            
+            console.log("In the else statement")
+
+            let vote = {}
             vote['user'] = userID
             vote['time'] = Date.now()
+
+            console.log(JSON.stringify(vote))
 
             poll['options'].push(vote)
         }
     });
+
+    saveActivePoll(channelID, pollName, poll)
 }
 
 
