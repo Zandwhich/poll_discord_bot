@@ -240,8 +240,6 @@ function voteInPoll(pollName, options, userID, channelID) {
         if (!doesOptionExistInPoll(pollName, option, channelID, userID)) {
             errorMessage(userID, channelID, ERROR_CODES.OPTION_NOT_EXISTS, [option])
         } else {
-            
-            console.log("In the else statement")
 
             let vote = {}
             vote['user'] = userID
