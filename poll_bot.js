@@ -17,7 +17,6 @@ const auth = require('./auth.json')
 
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
-const { Z_VERSION_ERROR } = require('zlib')
 
 // The filename of the JSON that holds all of the active polls
 const POLLS_ACTIVE_FILENAME = "./polls_active.json"
