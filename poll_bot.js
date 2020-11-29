@@ -263,40 +263,45 @@ function doesOptionExistInPoll(pollName, option, channelID, userID) {
     let doesExist = false
     options.forEach(element => {
         if (element['name'] == option) doesExist = true
-    });
+    })
     return doesExist
 }
 
 /**
- * Votes in the poll with the given options
+ * Votes in the poll with the given votes
  * @param {string} pollName The name of the poll in which to vote
- * @param {string[]} options The options to vote for in the poll
+ * @param {string[]} votes The options to vote for in the poll
  * @param {string} userID The id of the user
  * @param {string} channelID the id of the channel
  */
-function voteInPoll(pollName, options, userID, channelID) {
+function voteInPoll(pollName, votes, userID, channelID) {
+    // Get the poll
     if (!getPoll(pollName, channelID)) {
         errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
         return
     }
-
     let poll = getPoll(pollName, channelID)
 
-    options.forEach(option => {
-        if (!doesOptionExistInPoll(pollName, option, channelID, userID)) {
-            errorMessage(userID, channelID, ERROR_CODES.OPTION_NOT_EXISTS, [option])
-        } else {
+    // Go through every vote
+    votes.forEach(vote => {
 
-            let vote = {}
-            vote['user'] = userID
-            vote['time'] = Date.now()
+        // See if an option for that vote exists
+        poll['options'].forEach(option => {
 
-            console.log(JSON.stringify(vote))
+            // If it exists, set the option to have another vote
+            if (option['name'] == vote) {
+                let vote = {}
+                vote['user'] = userID
+                vote['time'] = Date.now()
 
-            poll['options'].push(vote)
-        }
+                option['votes'].push(vote)
+
+                return
+            }
+        })
     });
 
+    // Save the updated poll
     saveActivePoll(channelID, pollName, poll)
 }
 
@@ -407,7 +412,7 @@ const bot = new Discord.Client({
 bot.on('ready', function (evt) {
     console.log('\n')
     logger.info(' ############################## ')
-    logger.info(' # /poll v ' + package.version + ' # ')
+    logger.info(' # Poll         version ' + package.version + ' # ')
     logger.info(' ############################## ')
     console.log('\n')
     logger.info('Connected. Logged in as: ' + bot.username + ' - (' + bot.id + ')')
