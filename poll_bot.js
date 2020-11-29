@@ -24,6 +24,9 @@ const POLLS_ACTIVE_FILENAME = "./polls_active.json"
 // The filename of the JSON that holds all of the finished polls
 const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 
+// A list of bad poll names that screw with everything
+const BAD_POLL_NAMES = ['']
+
 
 /* ******* *
  * HELPERS *
@@ -82,6 +85,8 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
                 return 'Dude, ' + args[0] + ' is already an option'
             case ERROR_CODES.OPTION_NOT_EXISTS:
                 return 'Dude, ' + args[0] + ' is not a valid option'
+            case ERROR_CODES.BAD_POLL_NAME:
+                return 'Yo, \'' + args[0] + '\' is a bad poll name'
             default:
                 return 'Idk what went wrong G'
         }
@@ -112,7 +117,6 @@ function handleListActivePolls(userID, channelID) {
     console.log(JSON.stringify(polls))
 
     for (let poll in polls) {
-        console.log(poll)
         text += "\n* `" + poll + "`"
     }
 
@@ -166,8 +170,8 @@ function getActiveChannelPolls(channelID) {
  * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
  */
 function getPoll(pollName, channelID) {
-    const polls = getActivePolls()
-    return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
+    const polls = getChannelPolls(channelID)
+    return polls[pollName] == undefined ? false : polls[pollName]
 }
 
 //#endregion GET_POLLS
@@ -228,6 +232,12 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     if (getPoll(pollName, channelID) != false) {
         errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
         return    
+    }
+
+    // Check if this is an acceptable poll name
+    if (BAD_POLL_NAMES.includes(pollName)) {
+        errorMessage(userID, channelID, ERROR_CODES.BAD_POLL_NAME, [pollName])
+        return
     }
 
     // Get the polls object with all of the polls
