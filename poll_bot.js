@@ -32,7 +32,7 @@ const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 
 /**
  * Returns text that will mention a user
- * @param {*} userID The user which to mention
+ * @param {string} userID The user which to mention
  */
 function mentionUser(userID) {
     return '<@' + userID + '>'
@@ -40,9 +40,22 @@ function mentionUser(userID) {
 
 
 /**
+ * Sends the passed-in message to the passed-in channel
+ * @param {string} channelID The ID of the channel
+ * @param {string} message The message to send
+ */
+function sendMessage(channelID, message) {
+    bot.sendMessage({
+        to: channelID,
+        message: message
+    })
+}
+
+
+/**
  * Draws from a preset list of error messages depending on the ErrorCode
- * @param {*} userID The user which to mention
- * @param {*} channelID The channel to send the message in
+ * @param {string} userID The user which to mention
+ * @param {string} channelID The channel to send the message in
  * @param {ERROR_CODES} errorCode The error code to send the appropriate message
  * @param {string[]} args Any additional argument(s) for the given error message
  */
@@ -74,13 +87,39 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
         }
     })(errorCode, args)
 
-    bot.sendMessage({
-        to: channelID,
-        message: mentionUser(userID) + ' ' + message
-    })
+    message = mentionUser(userID) + ' ' + message
+
+    sendMessage(channelID, message)
 }
 
 //#endregion HELPERS
+
+
+/* ********** *
+ * LIST POLLS *
+ * ********** */
+//#region LIST_POLLS
+
+/**
+ * Outputs a list of all of the active polls
+ * @param {string} channelID The channel from which to grab the polls
+ */
+function handleListActivePolls(userID, channelID) {
+    const polls = getActiveChannelPolls(channelID)
+
+    var text = mentionUser(userID) + " all active polls for this channel:"
+
+    console.log(JSON.stringify(polls))
+
+    for (let poll in polls) {
+        console.log(poll)
+        text += "\n* `" + poll + "`"
+    }
+
+    sendMessage(channelID, text)
+}
+
+//#endregion LIST_POLLS
 
 
 /* ********* *
@@ -91,10 +130,9 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
 /**
  * Returns all of the active polls as a JSON object.
  * If it doesn't exist, it creates a new one
- * @param {*} channelID The channel in which this poll is taking place
  * @returns {JSON} The polls as a JSON object
  */
-function getActivePollsForChannel(channelID) {
+function getActivePolls() {
     let polls 
     try {
         polls = JSON.parse(fs.readFileSync(POLLS_ACTIVE_FILENAME))
@@ -103,29 +141,23 @@ function getActivePollsForChannel(channelID) {
     }
 
     if (polls == undefined) polls = {}
-    if (polls[channelID] == undefined) polls[channelID] = {}
- 
+
     return polls
 }
 
 
 /**
- * Returns all of the polls in the JSON (including all outside of the channel)
- * NOTE: To be used mostly with saving
- * @returns {JSON} All of the polls as a JSON object
+ * Gets all of the active polls for the given channel
+ * @param {string} channelID The channel ID
  */
-function getAllActivePolls() {
-    let polls
-    try {
-        polls = JSON.parse(fs.readFileSync(POLLS_ACTIVE_FILENAME))
-    } catch (error) {
-        // TODO: Figure out what the hell to do when you can't read the file
-    }
+function getActiveChannelPolls(channelID) {
+    let polls = getActivePolls()
 
-    if (polls == undefined) polls = {}
+    if (polls[channelID] == undefined) polls[channelID] = {}
 
-    return polls
+    return polls[channelID]
 }
+
 
 /**
  * Returns the JSON the poll if it exists for this channel, false otherwise
@@ -134,7 +166,7 @@ function getAllActivePolls() {
  * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
  */
 function getPoll(pollName, channelID) {
-    const polls = getActivePollsForChannel(channelID)
+    const polls = getActivePolls()
     return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
 }
 
@@ -167,7 +199,7 @@ function writeActivePolls(polls)
  */
 function saveActivePoll(channelID, pollName, poll)
 {
-    let polls = getAllActivePolls()
+    let polls = getActivePolls()
 
     polls[channelID][pollName] = poll
 
@@ -186,8 +218,8 @@ function saveActivePoll(channelID, pollName, poll)
  * Creates the poll if one with the same name doesn't already exist in this channel
  * TODO: Decide if we are going to be returning error values or not
  * @param {string} pollName The name of the poll
- * @param {*} userID The user that is creating the poll
- * @param {*} channelID The channel in which the poll is being created
+ * @param {string} userID The user that is creating the poll
+ * @param {string} channelID The channel in which the poll is being created
  * @param {HTMLAllCollection} options The options for the poll
  */
 function createNewPoll(pollName, userID, channelID, options = []) {
@@ -199,7 +231,7 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     }
 
     // Get the polls object with all of the polls
-    let polls = getActivePollsForChannel(channelID)
+    let polls = getActivePolls()
 
     // Create a new empty poll
     polls[channelID][pollName]               = {}
@@ -221,9 +253,9 @@ function createNewPoll(pollName, userID, channelID, options = []) {
 
 /**
  * Handles creating a new poll
- * @param {*} userID The user who started the poll
- * @param {*} channelID The channel in which the poll is started
- * @param {*} args The arguments to go along with the poll
+ * @param {string} userID The user who started the poll
+ * @param {string} channelID The channel in which the poll is started
+ * @param {string[]} args The arguments to go along with the poll
  */
 function handleNewPoll(userID, channelID, args) {
     // Check to see if correct arguments were passed in
@@ -307,9 +339,9 @@ function voteInPoll(pollName, votes, userID, channelID) {
 
 /**
  * Handles voting in a poll
- * @param {*} userID The user who is voting
- * @param {*} channelID The channel in which poll is
- * @param {*} args The arguments for voting
+ * @param {string} userID The user who is voting
+ * @param {string} channelID The channel in which poll is
+ * @param {string} args The arguments for voting
  */
 function handleVoting(userID, channelID, args) {
     // Check to see if correct arguments were passed in
@@ -334,9 +366,9 @@ function handleVoting(userID, channelID, args) {
 
 /**
  * Handles ending a poll
- * @param {*} userID The user that ended the poll
- * @param {*} channelID The channel in which the poll is taking place
- * @param {*} args The arguments about the poll
+ * @param {string} userID The user that ended the poll
+ * @param {string} channelID The channel in which the poll is taking place
+ * @param {string} args The arguments about the poll
  */
 function handleEndPoll(userID, channelID, args) {
     errorMessage(userID, channelID, ERROR_CODES.DEVS_SUCK)
@@ -346,9 +378,9 @@ function handleEndPoll(userID, channelID, args) {
 
 /**
  * Takes care of the input
- * @param {*} userID The user that sent the input
- * @param {*} channelID The channel in which the messgae was sent
- * @param {*} args The arguments passed in
+ * @param {string} userID The user that sent the input
+ * @param {string} channelID The channel in which the messgae was sent
+ * @param {string} args The arguments passed in
  */
 function handleInput(userID, channelID, args) {
 
@@ -383,6 +415,9 @@ function handleInput(userID, channelID, args) {
         case 'vote':
         case 'option':
             handleVoting(userID, channelID, args)
+            break
+        case 'list':
+            handleListActivePolls(userID, channelID)
             break
         default:
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)
