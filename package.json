@@ -1,6 +1,6 @@
 {
     "name": "poll_bot",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "A bot that allows you to do polls",
     "main": "poll_bot.js",
     "author": "Alex Zdanowicz and Shengbo Jia (with love from Manik Kumar and Kyle Guthrie <3)",

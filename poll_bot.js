@@ -25,6 +25,11 @@ const POLLS_ACTIVE_FILENAME = "./polls_active.json"
 const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 
 
+/* ******* *
+ * HELPERS *
+ * ******* */
+//#region HELPERS
+
 /**
  * Returns text that will mention a user
  * @param {*} userID The user which to mention
@@ -75,9 +80,13 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
     })
 }
 
+//#endregion HELPERS
+
+
 /* ********* *
  * GET POLLS *
  * ********* */
+//#region GET_POLLS
 
 /**
  * Returns all of the active polls as a JSON object.
@@ -129,6 +138,13 @@ function getPoll(pollName, channelID) {
     return polls[channelID][pollName] == undefined ? false : polls[channelID][pollName]
 }
 
+//#endregion GET_POLLS
+
+
+/* ********** *
+ * SAVE POLLS *
+ * *********** */
+ //#region SAVE_POLLS
 
 /**
  * Saves the passed-in polls data in the polls file
@@ -142,7 +158,6 @@ function writeActivePolls(polls)
         // TODO: Figure out what the hell to do with the error
     }
 }
-
 
 /**
  * Writes the polls to the polls_active.json file
@@ -159,28 +174,13 @@ function saveActivePoll(channelID, pollName, poll)
     writeActivePolls(polls)
 }
 
+//#endregion SAVE_POLLS
 
-/**
- * Returns true if a given option exists in a poll; false otherwise
- * @param {string} pollName The name of the poll
- * @param {string} option The option to check
- * @param {string} channelID The ID of the channel
- * @returns {boolean} true if the given option exists in a poll; false otherwise
- */
-function doesOptionExistInPoll(pollName, option, channelID, userID) {
-    // If the poll itself doesn't exist, then return false
-    const poll = getPoll(pollName, channelID);
-    if (poll == false) return false
 
-    const options = poll['options']
-
-    let doesExist = false
-    options.forEach(element => {
-        if (element['name'] == option) doesExist = true
-    });
-    return doesExist
-}
-
+/* ************ *
+ * CREATE POLLS *
+ * ************ */
+//#region CREATE_POLLS
 
 /**
  * Creates the poll if one with the same name doesn't already exist in this channel
@@ -219,6 +219,53 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     writeActivePolls(polls);
 }
 
+/**
+ * Handles creating a new poll
+ * @param {*} userID The user who started the poll
+ * @param {*} channelID The channel in which the poll is started
+ * @param {*} args The arguments to go along with the poll
+ */
+function handleNewPoll(userID, channelID, args) {
+    // Check to see if correct arguments were passed in
+    if (args.length == 0) {
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    const name = args[0].toLowerCase()
+    args = args.splice(1)
+
+    createNewPoll(name, userID, channelID, args)
+}
+
+//#endregion CREATE_POLLS
+
+
+/* ****** *
+ * VOTING *
+ * ****** */
+//#region VOTING
+
+/**
+ * Returns true if a given option exists in a poll; false otherwise
+ * @param {string} pollName The name of the poll
+ * @param {string} option The option to check
+ * @param {string} channelID The ID of the channel
+ * @returns {boolean} true if the given option exists in a poll; false otherwise
+ */
+function doesOptionExistInPoll(pollName, option, channelID, userID) {
+    // If the poll itself doesn't exist, then return false
+    const poll = getPoll(pollName, channelID);
+    if (poll == false) return false
+
+    const options = poll['options']
+
+    let doesExist = false
+    options.forEach(element => {
+        if (element['name'] == option) doesExist = true
+    });
+    return doesExist
+}
 
 /**
  * Votes in the poll with the given options
@@ -253,6 +300,44 @@ function voteInPoll(pollName, options, userID, channelID) {
     saveActivePoll(channelID, pollName, poll)
 }
 
+/**
+ * Handles voting in a poll
+ * @param {*} userID The user who is voting
+ * @param {*} channelID The channel in which poll is
+ * @param {*} args The arguments for voting
+ */
+function handleVoting(userID, channelID, args) {
+    // Check to see if correct arguments were passed in
+    if (args.length < 2) {
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    const pollName = args[0].toLowerCase()
+    args = args.splice(1)
+
+    voteInPoll(pollName, args, userID, channelID)
+}
+
+//#endregion VOTING
+
+
+/* ********* *
+ * END POLLS *
+ * ********* */
+//#region END_POLLS
+
+/**
+ * Handles ending a poll
+ * @param {*} userID The user that ended the poll
+ * @param {*} channelID The channel in which the poll is taking place
+ * @param {*} args The arguments about the poll
+ */
+function handleEndPoll(userID, channelID, args) {
+    errorMessage(userID, channelID, ERROR_CODES.DEVS_SUCK)
+}
+
+//#endregion END_POLLS
 
 /**
  * Takes care of the input
@@ -298,57 +383,6 @@ function handleInput(userID, channelID, args) {
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)
             break
     }
-}
-
-
-/**
- * Handles creating a new poll
- * @param {*} userID The user who started the poll
- * @param {*} channelID The channel in which the poll is started
- * @param {*} args The arguments to go along with the poll
- */
-function handleNewPoll(userID, channelID, args) {
-    // Check to see if correct arguments were passed in
-    if (args.length == 0) {
-        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
-        return
-    }
-
-    const name = args[0].toLowerCase()
-    args = args.splice(1)
-
-    createNewPoll(name, userID, channelID, args)
-}
-
-
-/**
- * Handles voting in a poll
- * @param {*} userID The user who is voting
- * @param {*} channelID The channel in which poll is
- * @param {*} args The arguments for voting
- */
-function handleVoting(userID, channelID, args) {
-    // Check to see if correct arguments were passed in
-    if (args.length < 2) {
-        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
-        return
-    }
-
-    const pollName = args[0].toLowerCase()
-    args = args.splice(1)
-
-    voteInPoll(pollName, args, userID, channelID)
-}
-
-
-/**
- * Handles ending a poll
- * @param {*} userID The user that ended the poll
- * @param {*} channelID The channel in which the poll is taking place
- * @param {*} args The arguments about the poll
- */
-function handleEndPoll(userID, channelID, args) {
-    errorMessage(userID, channelID, ERROR_CODES.DEVS_SUCK)
 }
 
 
