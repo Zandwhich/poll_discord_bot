@@ -28,9 +28,9 @@ const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 const BAD_POLL_NAMES = ['']
 
 
-/* ******* *
- * HELPERS *
- * ******* */
+/* ******** *
+ * MESSAGES *
+ * ******** */
 //#region HELPERS
 
 /**
@@ -92,38 +92,12 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
         }
     })(errorCode, args)
 
-    message = mentionUser(userID) + ' ' + message
+    message = "> " + mentionUser(userID) + ' ' + message
 
     sendMessage(channelID, message)
 }
 
 //#endregion HELPERS
-
-
-/* ********** *
- * LIST POLLS *
- * ********** */
-//#region LIST_POLLS
-
-/**
- * Outputs a list of all of the active polls
- * @param {string} channelID The channel from which to grab the polls
- */
-function handleListActivePolls(userID, channelID) {
-    const polls = getActiveChannelPolls(channelID)
-
-    var text = mentionUser(userID) + " all active polls for this channel:"
-
-    console.log(JSON.stringify(polls))
-
-    for (let poll in polls) {
-        text += "\n* `" + poll + "`"
-    }
-
-    sendMessage(channelID, text)
-}
-
-//#endregion LIST_POLLS
 
 
 /* ********* *
@@ -169,8 +143,8 @@ function getActiveChannelPolls(channelID) {
  * @param {string} channelID The ID of the channel
  * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
  */
-function getPoll(pollName, channelID) {
-    const polls = getChannelPolls(channelID)
+function getActivePoll(pollName, channelID) {
+    const polls = getActiveChannelPolls(channelID)
     return polls[pollName] == undefined ? false : polls[pollName]
 }
 
@@ -203,9 +177,11 @@ function writeActivePolls(polls)
  */
 function saveActivePoll(channelID, pollName, poll)
 {
-    let polls = getActivePolls()
+    let channelPolls = getActiveChannelPolls(channelID)
+    channelPolls[pollName] = poll
 
-    polls[channelID][pollName] = poll
+    let polls = getActivePolls()
+    polls[channelID] = channelPolls
 
     writeActivePolls(polls)
 }
@@ -229,7 +205,7 @@ function saveActivePoll(channelID, pollName, poll)
 function createNewPoll(pollName, userID, channelID, options = []) {
 
     // Check if this poll already exists; if it does, throw an error
-    if (getPoll(pollName, channelID) != false) {
+    if (getActivePoll(pollName, channelID) != false) {
         errorMessage(userID, channelID, ERROR_CODES.POLL_EXISTS)
         return    
     }
@@ -240,25 +216,27 @@ function createNewPoll(pollName, userID, channelID, options = []) {
         return
     }
 
-    // Get the polls object with all of the polls
-    let polls = getActivePolls()
-
     // Create a new empty poll
-    polls[channelID][pollName]               = {}
-    polls[channelID][pollName]['options']    = []
-    polls[channelID][pollName]['time_start'] = Date.now()
-    polls[channelID][pollName]['time_end']   = -1
-    polls[channelID][pollName]['owner']      = userID
-    polls[channelID][pollName]['settings']   = []
-    polls[channelID][pollName]['votes']      = []
+    let poll           = {}         // Creating the empty poll objects
+    poll['options']    = []         // The different voting options of the poll
+    poll['time_start'] = Date.now() // The time at which the poll started
+    poll['time_end']   = -1         // The time at which the poll ended
+    poll['owner']      = userID     // The owner of the poll
+    poll['settings']   = {}         // The settings of the poll
+    // poll['votes']      = []      // TODO: Figure out why I put this here...
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
         const option = options[i].toLowerCase()
-        polls[channelID][pollName]['options'].push({"name":option, "votes":[]})
+        poll['options'].push({"name":option, "votes":[], "created":Date.now()})
     }
 
-    writeActivePolls(polls);
+    // Set in the settings that users can vote multiple times
+    poll['settings']['multiple_votes'] = true
+
+    saveActivePoll(channelID, pollName, poll)
+
+    // Send a message saying the poll has been created succesfully
 }
 
 /**
@@ -283,6 +261,76 @@ function handleNewPoll(userID, channelID, args) {
 //#endregion CREATE_POLLS
 
 
+/* ********** *
+ * LIST POLLS *
+ * ********** */
+//#region LIST_POLLS
+
+/**
+ * Outputs a list of all of the active polls
+ * @param {string} channelID The channel from which to grab the polls
+ */
+function handleListActivePolls(userID, channelID) {
+    const polls = getActiveChannelPolls(channelID)
+
+    var text = mentionUser(userID) + " all active polls for this channel:"
+
+    console.log(JSON.stringify(polls))
+
+    for (let poll in polls) {
+        text += "\n* `" + poll + "`"
+    }
+
+    sendMessage(channelID, text)
+}
+
+//#endregion LIST_POLLS
+
+
+/* ********** *
+ * VIEW POLLS *
+ * ********** */
+//#region VIEW_POLLS
+
+/**
+ * Returns the information on how the voting for a given poll
+ * @param {string} userID The user who made the request
+ * @param {string} channelID The channel
+ * @param {string[]} args The arguments for viewing this poll
+ */
+function handleViewPoll(userID, channelID, args) {
+    console.log("handleViewPoll with args: " + JSON.stringify(args))
+
+    // Check to see if arguments were passed in
+    if (args.length < 1) {
+        console.log("Here")
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    const pollName = args[0]
+    const poll = getActivePoll(pollName, channelID)
+
+    // Check to see if the poll exists
+    if (!poll) {
+        errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
+        return
+    }
+
+    // Start the text to be output
+    var text = "View Poll " + mentionUser(userID) + ":\n" + pollName
+
+    // List all of the options and how many votes each one has received
+    const options = poll['options']
+    options.forEach(option => {
+        text += "\n  * `" + option['name'] + "`: " + option['votes'].length
+    })
+
+    sendMessage(channelID, text)
+}
+
+//#endregion VIEW_POLLS
+
 /* ****** *
  * VOTING *
  * ****** */
@@ -297,7 +345,7 @@ function handleNewPoll(userID, channelID, args) {
  */
 function doesOptionExistInPoll(pollName, option, channelID, userID) {
     // If the poll itself doesn't exist, then return false
-    const poll = getPoll(pollName, channelID);
+    const poll = getActivePoll(pollName, channelID)
     if (poll == false) return false
 
     const options = poll['options']
@@ -318,11 +366,11 @@ function doesOptionExistInPoll(pollName, option, channelID, userID) {
  */
 function voteInPoll(pollName, votes, userID, channelID) {
     // Get the poll
-    if (!getPoll(pollName, channelID)) {
+    if (!getActivePoll(pollName, channelID)) {
         errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
         return
     }
-    let poll = getPoll(pollName, channelID)
+    let poll = getActivePoll(pollName, channelID)
 
     // Go through every vote
     votes.forEach(vote => {
@@ -341,7 +389,7 @@ function voteInPoll(pollName, votes, userID, channelID) {
                 return
             }
         })
-    });
+    })
 
     // Save the updated poll
     saveActivePoll(channelID, pollName, poll)
@@ -390,9 +438,12 @@ function handleEndPoll(userID, channelID, args) {
  * Takes care of the input
  * @param {string} userID The user that sent the input
  * @param {string} channelID The channel in which the messgae was sent
- * @param {string} args The arguments passed in
+ * @param {string[]} args The arguments passed in
  */
 function handleInput(userID, channelID, args) {
+
+    console.log("\n")
+    console.log("handleInput with args: " + JSON.stringify(args))
 
     let cmd = args[0]
 
@@ -413,6 +464,8 @@ function handleInput(userID, channelID, args) {
     cmd = cmd.toLowerCase()
     args = args.splice(1)
 
+    console.log("handleInput switch with args: " + JSON.stringify(args))
+
     switch (cmd) {
         case 'create':
         case 'new':
@@ -428,6 +481,9 @@ function handleInput(userID, channelID, args) {
             break
         case 'list':
             handleListActivePolls(userID, channelID)
+            break
+        case 'view':
+            handleViewPoll(userID, channelID, args)
             break
         default:
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)
