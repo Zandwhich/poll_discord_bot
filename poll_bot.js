@@ -18,20 +18,94 @@ const auth = require('./auth.json')
 // Enums
 const ERROR_CODES = require('./enums/ERROR_CODES.json')
 
-// The filename of the JSON that holds all of the active polls
+/* ********* *
+ * CONSTANTS *
+ * ********* */
+//#region CONSTANTS
+
+/**
+ * The filename of the JSON that holds all of the active polls
+ */
 const POLLS_ACTIVE_FILENAME = "./polls_active.json"
 
-// The filename of the JSON that holds all of the finished polls
+/**
+ * The filename of the JSON that holds all of the finished polls
+ */
 const POLLS_FINISHED_FILENAME = "./polls_finished.json"
 
-// A list of bad poll names that screw with everything
+/**
+ * A list of bad poll names that screw with everything
+ */
 const BAD_POLL_NAMES = ['']
+
+/* POLL JSON VALUES */
+//#region POLL_JSON
+
+/**
+ * The start time of the poll
+ */
+const POLL_JSON_START_TIME = 'time_start'
+
+/**
+ * The end time of the poll
+ */
+const POLL_JSON_END_TIME = 'time_end'
+
+/**
+ * The owner of the poll
+ */
+const POLL_JSON_OWNER = 'owner'
+
+/**
+ * The settings of the poll
+ */
+const POLL_JSON_SETTINGS = 'settings'
+
+/**
+ * The name of the setting to allow users to vote for multiple options
+ */
+const POLL_JSON_SETTINGS_MULTIPLE_VOTES = 'multiple_votes'
+
+/**
+ * The name of the list that contains all of the possible options for which to vote
+ */
+const POLL_JSON_OPTIONS = 'options'
+
+/**
+ * The name of an option for the poll
+ */
+const POLL_JSON_OPTION_NAME = 'name'
+
+/**
+ * When the option
+ */
+const POLL_JSON_OPTION_CREATED = 'time_created'
+
+/**
+ * The votes that are cast for an option
+ */
+const POLL_JSON_OPTION_VOTES = 'votes'
+
+/**
+ * The user that voted for this
+ */
+const POLL_JSON_OPTION_VOTES_USER = 'user'
+
+/**
+ * The time when the user voted
+ */
+const POLL_JSON_OPTION_VOTES_TIME = 'time'
+
+//#endregion POLL_JSON
+
+
+//#endregion CONSTANTS
 
 
 /* ******** *
  * MESSAGES *
  * ******** */
-//#region HELPERS
+//#region MESSAGES
 
 /**
  * Returns text that will mention a user
@@ -82,9 +156,9 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
             case ERROR_CODES.POLL_NOT_EXISTS:
                 return 'Bruh, a poll with that name doesn\'t exist'
             case ERROR_CODES.OPTION_EXISTS:
-                return 'Dude, ' + args[0] + ' is already an option'
+                return 'Dude, `' + args[0] + '` is already an option'
             case ERROR_CODES.OPTION_NOT_EXISTS:
-                return 'Dude, ' + args[0] + ' is not a valid option'
+                return 'Dude, `' + args[0] + '` is not a valid option'
             case ERROR_CODES.BAD_POLL_NAME:
                 return 'Yo, \'' + args[0] + '\' is a bad poll name'
             default:
@@ -97,7 +171,7 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
     sendMessage(channelID, message)
 }
 
-//#endregion HELPERS
+//#endregion MESSAGES
 
 
 /* ********* *
@@ -217,22 +291,22 @@ function createNewPoll(pollName, userID, channelID, options = []) {
     }
 
     // Create a new empty poll
-    let poll           = {}         // Creating the empty poll objects
-    poll['options']    = []         // The different voting options of the poll
-    poll['time_start'] = Date.now() // The time at which the poll started
-    poll['time_end']   = -1         // The time at which the poll ended
-    poll['owner']      = userID     // The owner of the poll
-    poll['settings']   = {}         // The settings of the poll
+    let poll                   = {}         // Creating the empty poll objects
+    poll[POLL_JSON_OPTIONS]    = []         // The different voting options of the poll
+    poll[POLL_JSON_START_TIME] = Date.now() // The time at which the poll started
+    poll[POLL_JSON_END_TIME]   = -1         // The time at which the poll ended
+    poll[POLL_JSON_OWNER]      = userID     // The owner of the poll
+    poll[POLL_JSON_SETTINGS]   = {}         // The settings of the poll
     // poll['votes']      = []      // TODO: Figure out why I put this here...
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
         const option = options[i].toLowerCase()
-        poll['options'].push({"name":option, "votes":[], "created":Date.now()})
+        poll[POLL_JSON_OPTIONS].push({POLL_JSON_OPTION_NAME:option, POLL_JSON_OPTION_VOTES:[], POLL_JSON_OPTION_CREATED:Date.now()})
     }
 
     // Set in the settings that users can vote multiple times
-    poll['settings']['multiple_votes'] = true
+    poll[POLL_JSON_SETTINGS][POLL_JSON_SETTINGS_MULTIPLE_VOTES] = true
 
     saveActivePoll(channelID, pollName, poll)
 
@@ -303,7 +377,6 @@ function handleViewPoll(userID, channelID, args) {
 
     // Check to see if arguments were passed in
     if (args.length < 1) {
-        console.log("Here")
         errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
         return
     }
@@ -321,9 +394,9 @@ function handleViewPoll(userID, channelID, args) {
     var text = "View Poll " + mentionUser(userID) + ":\n" + pollName
 
     // List all of the options and how many votes each one has received
-    const options = poll['options']
+    const options = poll[POLL_JSON_OPTIONS]
     options.forEach(option => {
-        text += "\n  * `" + option['name'] + "`: " + option['votes'].length
+        text += "\n  * `" + option[POLL_JSON_OPTION_NAME] + "`: " + option[POLL_JSON_OPTION_VOTES].length
     })
 
     sendMessage(channelID, text)
@@ -348,11 +421,11 @@ function doesOptionExistInPoll(pollName, option, channelID, userID) {
     const poll = getActivePoll(pollName, channelID)
     if (poll == false) return false
 
-    const options = poll['options']
+    const options = poll[POLL_JSON_OPTIONS]
 
     let doesExist = false
     options.forEach(element => {
-        if (element['name'] == option) doesExist = true
+        if (element[POLL_JSON_OPTION_NAME] == option) doesExist = true
     })
     return doesExist
 }
@@ -376,15 +449,15 @@ function voteInPoll(pollName, votes, userID, channelID) {
     votes.forEach(vote => {
 
         // See if an option for that vote exists
-        poll['options'].forEach(option => {
+        poll[POLL_JSON_OPTIONS].forEach(option => {
 
             // If it exists, set the option to have another vote
-            if (option['name'] == vote) {
+            if (option[POLL_JSON_OPTION_NAME] == vote) {
                 let vote = {}
-                vote['user'] = userID
-                vote['time'] = Date.now()
+                vote[POLL_JSON_OPTION_VOTES_USER] = userID
+                vote[POLL_JSON_OPTION_VOTES_TIME] = Date.now()
 
-                option['votes'].push(vote)
+                option[POLL_JSON_OPTION_VOTES].push(vote)
 
                 return
             }
@@ -450,11 +523,13 @@ function handleInput(userID, channelID, args) {
     cmd = cmd.toLowerCase()
     args = args.splice(1)
 
+    // Check to see if the command is correct
     if (cmd != 'poll') {
         errorMessage(userID, channelID, ERROR_CODES.BAD)
         return
     }
 
+    // Check to see if the appropriate number of arguments were passed in
     if (args.length < 1) {
         errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
         return
