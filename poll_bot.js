@@ -98,7 +98,6 @@ const POLL_JSON_OPTION_VOTES_TIME = 'time'
 
 //#endregion POLL_JSON
 
-
 //#endregion CONSTANTS
 
 
@@ -410,6 +409,23 @@ function handleViewPoll(userID, channelID, args) {
 //#region VOTING
 
 /**
+ * Outputs a message upon succesfully voting for something
+ * @param {string} channelID The channel
+ * @param {string} userID The channel
+ * @param {string} pollName The name of the poll
+ * @param {string[]} votes The succesful votes
+ */
+function messageSuccesfulVotes(channelID, userID, pollName, votes) {
+    var text = mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
+
+    votes.forEach(vote => {
+        text += '\n * `' + vote + '`'
+    });
+
+    sendMessage(channelID, text)
+}
+
+/**
  * Returns true if a given option exists in a poll; false otherwise
  * @param {string} pollName The name of the poll
  * @param {string} option The option to check
@@ -445,6 +461,9 @@ function voteInPoll(pollName, votes, userID, channelID) {
     }
     let poll = getActivePoll(pollName, channelID)
 
+    // Keep track of the succesful votes to output at the end
+    let succesful_votes = []
+
     // Go through every vote
     votes.forEach(vote => {
 
@@ -459,6 +478,8 @@ function voteInPoll(pollName, votes, userID, channelID) {
 
                 option[POLL_JSON_OPTION_VOTES].push(vote)
 
+                succesful_votes.push(option[POLL_JSON_OPTION_NAME])
+
                 return
             }
         })
@@ -466,6 +487,8 @@ function voteInPoll(pollName, votes, userID, channelID) {
 
     // Save the updated poll
     saveActivePoll(channelID, pollName, poll)
+
+    messageSuccesfulVotes(channelID, userID, pollName, succesful_votes)
 }
 
 /**
