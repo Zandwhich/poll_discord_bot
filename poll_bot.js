@@ -390,12 +390,12 @@ function handleViewPoll(userID, channelID, args) {
     }
 
     // Start the text to be output
-    var text = "View Poll " + mentionUser(userID) + ":\n" + pollName
+    var text = "> View Poll " + mentionUser(userID) + ":\n> " + pollName
 
     // List all of the options and how many votes each one has received
     const options = poll[POLL_JSON_OPTIONS]
     options.forEach(option => {
-        text += "\n  * `" + option[POLL_JSON_OPTION_NAME] + "`: " + option[POLL_JSON_OPTION_VOTES].length
+        text += "\n>  * `" + option[POLL_JSON_OPTION_NAME] + "`: " + option[POLL_JSON_OPTION_VOTES].length
     })
 
     sendMessage(channelID, text)
@@ -416,10 +416,10 @@ function handleViewPoll(userID, channelID, args) {
  * @param {string[]} votes The succesful votes
  */
 function messageSuccesfulVotes(channelID, userID, pollName, votes) {
-    var text = mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
+    var text = '> ' + mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
 
     votes.forEach(vote => {
-        text += '\n * `' + vote + '`'
+        text += '\n>  * `' + vote + '`'
     });
 
     sendMessage(channelID, text)
