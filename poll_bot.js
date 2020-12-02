@@ -42,6 +42,11 @@ const BAD_POLL_NAMES = ['']
 //#region POLL_JSON
 
 /**
+ * The name of the poll
+ */
+const POLL_JSON_NAME = 'name'
+
+/**
  * The start time of the poll
  */
 const POLL_JSON_START_TIME = 'time_start'
@@ -55,6 +60,11 @@ const POLL_JSON_END_TIME = 'time_end'
  * The owner of the poll
  */
 const POLL_JSON_OWNER = 'owner'
+
+/**
+ * For the list containing all of the users who have voted
+ */
+const POLL_JSON_HAS_VOTED = 'has_voted'
 
 /**
  * The settings of the poll
@@ -168,6 +178,57 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
     message = "> " + mentionUser(userID) + ' ' + message
 
     sendMessage(channelID, message)
+}
+
+/**
+ * Outputs a message upon succesfully voting for something
+ * @param {string} channelID The channel
+ * @param {string} userID The channel
+ * @param {string} pollName The name of the poll
+ * @param {string[]} votes The succesful votes
+ */
+function messageSuccesfulVotes(channelID, userID, pollName, votes) {
+    var text = '> ' + mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
+
+    votes.forEach(vote => {
+        text += '\n>  * `' + vote + '`'
+    });
+
+    sendMessage(channelID, text)
+}
+
+/**
+ * Outputs a message when a user tries to vote for an option they already voted for
+ * @param {string} channelID The ID of the channel
+ * @param {string} userID The ID of the user
+ * @param {string} pollName The name of the poll
+ * @param {string[]} votes The votes that were already voted for
+ */
+function messageAlreadyVoted(channelID, userID, pollName, votes) {
+    var text = '> ' + mentionUser(userID) + ', you already voted in `' + pollName + '` for the following options:'
+
+    votes.forEach(vote => {
+        text += '\n>  * `' + vote + '`'
+    });
+
+    sendMessage(channelID, text)
+}
+
+/**
+ * Outputs a message when a user tries to vote for an option that doesn't exist
+ * @param {string} channelID The ID of the channel
+ * @param {string} userID The ID of the user
+ * @param {string} pollName The name of the poll
+ * @param {string[]} votes The options that don't exist
+ */
+function messageVotesDontExist(channelID, userID, pollName, votes) {
+    var text = '> ' + mentionUser(userID) + ', the following options don\'t exist in `' + pollName + '`:'
+
+    votes.forEach(vote => {
+        text += '\n>  * `' + vote + '`'
+    });
+
+    sendMessage(channelID, text)
 }
 
 //#endregion MESSAGES
@@ -291,17 +352,25 @@ function createNewPoll(pollName, userID, channelID, options = []) {
 
     // Create a new empty poll
     let poll                   = {}         // Creating the empty poll objects
+    poll[POLL_JSON_NAME]       = pollName   // The name of the poll
     poll[POLL_JSON_OPTIONS]    = []         // The different voting options of the poll
     poll[POLL_JSON_START_TIME] = Date.now() // The time at which the poll started
     poll[POLL_JSON_END_TIME]   = -1         // The time at which the poll ended
     poll[POLL_JSON_OWNER]      = userID     // The owner of the poll
     poll[POLL_JSON_SETTINGS]   = {}         // The settings of the poll
+    poll[POLL_JSON_HAS_VOTED]  = []         // The users that have voted for this poll
     // poll['votes']      = []      // TODO: Figure out why I put this here...
 
     // Set all of the options to the options passed in
     for (let i = 0; i < options.length; i++) {
-        const option = options[i].toLowerCase()
-        poll[POLL_JSON_OPTIONS].push({POLL_JSON_OPTION_NAME:option, POLL_JSON_OPTION_VOTES:[], POLL_JSON_OPTION_CREATED:Date.now()})
+        const option = options[i]
+        let option_json = {}
+
+        option_json[POLL_JSON_OPTION_NAME]    = option
+        option_json[POLL_JSON_OPTION_VOTES]   = []
+        option_json[POLL_JSON_OPTION_CREATED] = Date.now()
+
+        poll[POLL_JSON_OPTIONS].push(option_json)
     }
 
     // Set in the settings that users can vote multiple times
@@ -409,34 +478,13 @@ function handleViewPoll(userID, channelID, args) {
 //#region VOTING
 
 /**
- * Outputs a message upon succesfully voting for something
- * @param {string} channelID The channel
- * @param {string} userID The channel
- * @param {string} pollName The name of the poll
- * @param {string[]} votes The succesful votes
- */
-function messageSuccesfulVotes(channelID, userID, pollName, votes) {
-    var text = '> ' + mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
-
-    votes.forEach(vote => {
-        text += '\n>  * `' + vote + '`'
-    });
-
-    sendMessage(channelID, text)
-}
-
-/**
  * Returns true if a given option exists in a poll; false otherwise
- * @param {string} pollName The name of the poll
+ * @param {JSON} poll The name of the poll
  * @param {string} option The option to check
- * @param {string} channelID The ID of the channel
  * @returns {boolean} true if the given option exists in a poll; false otherwise
  */
-function doesOptionExistInPoll(pollName, option, channelID, userID) {
-    // If the poll itself doesn't exist, then return false
-    const poll = getActivePoll(pollName, channelID)
-    if (poll == false) return false
-
+function doesOptionExistInPoll(poll, option) {
+    // Get the options of the poll
     const options = poll[POLL_JSON_OPTIONS]
 
     let doesExist = false
@@ -447,31 +495,82 @@ function doesOptionExistInPoll(pollName, option, channelID, userID) {
 }
 
 /**
+ * Checks to see if the user has voted (for any option) in the poll
+ * @param {JSON} poll The poll in which to check 
+ * @param {string} userID The user to check if has voted 
+ */
+function hasVotedInPoll(poll, userID) {
+    const voters = poll[POLL_JSON_HAS_VOTED]
+
+    var has_voted = false
+    voters.forEach(voter => {
+        if (voter == userID) {
+            has_voted = true
+            return
+        }
+    });
+
+    return has_voted
+}
+
+/**
+ * Checks to see if the user has voted for a given option in a given poll
+ * @param {JSON} poll The poll in which to check
+ * @param {string} userID The user to see if has voted
+ * @param {string} option The option
+ */
+function hasVotedForOption(poll, userID, option) {
+        // First check if the option exists in the poll
+    if (!doesOptionExistInPoll(poll, option)) return false
+
+    const poll_options = poll[POLL_JSON_OPTIONS]
+
+    var has_voted = false
+
+    poll_options.forEach(poll_option => {
+        if (poll_option[POLL_JSON_OPTION_NAME] == option) {
+            const votes = poll_option[POLL_JSON_OPTION_VOTES]
+
+            votes.forEach(vote => {
+                if (vote[POLL_JSON_OPTION_VOTES_USER] == userID) {
+                    has_voted = true
+                    return
+                }
+            });
+
+            return
+        }
+    });
+
+    return has_voted
+}
+
+/**
  * Votes in the poll with the given votes
- * @param {string} pollName The name of the poll in which to vote
+ * @param {JSON} poll The poll in which to vote
  * @param {string[]} votes The options to vote for in the poll
  * @param {string} userID The id of the user
  * @param {string} channelID the id of the channel
  */
-function voteInPoll(pollName, votes, userID, channelID) {
-    // Get the poll
-    if (!getActivePoll(pollName, channelID)) {
-        errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
-        return
-    }
-    let poll = getActivePoll(pollName, channelID)
-
+function voteInPoll(poll, votes, userID, channelID) {
     // Keep track of the succesful votes to output at the end
     let succesful_votes = []
 
-    // Go through every vote
-    votes.forEach(vote => {
+    // Keep track of the options this user already voted for
+    let already_voted = []
 
+    // Keep track of the options this user tried to vote for but don't exist
+    let not_exists = []
+
+    // Go through every vote
+    votes.forEach(voteName => {
+
+        var exists = false
         // See if an option for that vote exists
         poll[POLL_JSON_OPTIONS].forEach(option => {
 
             // If it exists, set the option to have another vote
-            if (option[POLL_JSON_OPTION_NAME] == vote) {
+            if (option[POLL_JSON_OPTION_NAME] == voteName && !hasVotedForOption(poll, userID, voteName)) {
                 let vote = {}
                 vote[POLL_JSON_OPTION_VOTES_USER] = userID
                 vote[POLL_JSON_OPTION_VOTES_TIME] = Date.now()
@@ -480,15 +579,26 @@ function voteInPoll(pollName, votes, userID, channelID) {
 
                 succesful_votes.push(option[POLL_JSON_OPTION_NAME])
 
+                exists = true
                 return
+            } else if (option[POLL_JSON_OPTION_NAME] == voteName && hasVotedForOption(poll, userID, voteName)) {
+                already_voted.push(voteName)
+
+                exists = true
+                return 
             }
         })
+        if (!exists) not_exists.push(voteName)
     })
 
-    // Save the updated poll
-    saveActivePoll(channelID, pollName, poll)
+    if (!hasVotedInPoll(poll, userID)) poll[POLL_JSON_HAS_VOTED].push(userID)
 
-    messageSuccesfulVotes(channelID, userID, pollName, succesful_votes)
+    // Save the updated poll
+    saveActivePoll(channelID, poll[POLL_JSON_NAME], poll)
+
+    if (succesful_votes.length > 0) messageSuccesfulVotes(channelID, userID, poll[POLL_JSON_NAME], succesful_votes)
+    if (already_voted.length > 0)   messageAlreadyVoted(channelID, userID, poll[POLL_JSON_NAME], already_voted)
+    if (not_exists.length > 0)      messageVotesDontExist(channelID, userID, poll[POLL_JSON_NAME], not_exists)
 }
 
 /**
@@ -507,7 +617,13 @@ function handleVoting(userID, channelID, args) {
     const pollName = args[0].toLowerCase()
     args = args.splice(1)
 
-    voteInPoll(pollName, args, userID, channelID)
+    let poll = getActivePoll(pollName, channelID);
+    if (!poll) {
+        errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS)
+        return
+    }
+
+    voteInPoll(poll, args, userID, channelID)
 }
 
 //#endregion VOTING
@@ -538,9 +654,6 @@ function handleEndPoll(userID, channelID, args) {
  */
 function handleInput(userID, channelID, args) {
 
-    console.log("\n")
-    console.log("handleInput with args: " + JSON.stringify(args))
-
     let cmd = args[0]
 
     cmd = cmd.toLowerCase()
@@ -561,8 +674,6 @@ function handleInput(userID, channelID, args) {
     cmd = args[0]
     cmd = cmd.toLowerCase()
     args = args.splice(1)
-
-    console.log("handleInput switch with args: " + JSON.stringify(args))
 
     switch (cmd) {
         case 'create':
