@@ -1,9 +1,9 @@
 {
     "name": "poll_bot",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "A bot that allows you to do polls",
     "main": "poll_bot.js",
-    "author": "Alex Zdanowicz and Shengbo Jia (with love from Manik Kumar and Kyle Guthrie <3)",
+    "author": "Alex Zdanowicz and Shengbo Jia (with <3 from Manik Kumar and Kyle Guthrie)",
     "dependencies": {
         "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
         "eslint": "^7.12.1",
