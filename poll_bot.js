@@ -111,6 +111,22 @@ const POLL_JSON_OPTION_VOTES_TIME = 'time'
 //#endregion CONSTANTS
 
 
+/* **** *
+ * HELP *
+ * **** */
+//#region HELP
+
+/**
+ * Handles what happens when the help action is called
+ * @param {string} userID The ID of the user
+ * @param {string} channelID The ID of the channel
+ */
+function handleHelp(userID, channelID) {
+    sendMessage(channelID, "Bruh...")
+}
+
+//#endregion HELP
+
 /* ******** *
  * MESSAGES *
  * ******** */
@@ -693,6 +709,9 @@ function handleInput(userID, channelID, args) {
             break
         case 'view':
             handleViewPoll(userID, channelID, args)
+            break
+        case 'help':
+            handleHelp(userID, channelID)
             break
         default:
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)
