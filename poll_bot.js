@@ -122,7 +122,14 @@ const POLL_JSON_OPTION_VOTES_TIME = 'time'
  * @param {string} channelID The ID of the channel
  */
 function handleHelp(userID, channelID) {
-    sendMessage(channelID, "Bruh...")
+    var message = "> " + mentionUser(userID) + ", here are some commands you can run:\n"
+    message += "> * `!poll help`: Displays this message\n"
+    message += "> * `!poll new/create poll_name opt1 opt2...`: Creates a new poll for this channel with the name '`poll_name`' and options '`opt1`' and '`opt2`' (can create from 0 to as many options as you want)\n"
+    message += "> * `!poll vote poll_name opt1 opt2`: Votes for options '`opt1`' and '`opt2`' in the poll '`poll_name`'. You can have from 1 to as many options as you like, given the poll allows for multiple votes\n"
+    message += "> * `!poll list`: List all of the active polls for this channel\n"
+    message += "> * `!poll view poll_name`: Views the settings, the options, and the number of votes per option for an active poll in this channel with the name '`poll_name`'\n"
+
+    sendMessage(channelID, message)
 }
 
 //#endregion HELP
