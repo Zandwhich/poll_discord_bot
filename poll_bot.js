@@ -6,8 +6,8 @@
 
 // Imports
 const Discord = require('discord.io')
-const logger = require('winston')
-const fs = require('fs')
+const logger  = require('winston')
+const fs      = require('fs')
 
 // Node.JS imports
 const package = require('./package.json')
