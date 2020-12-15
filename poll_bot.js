@@ -108,6 +108,21 @@ const POLL_JSON_OPTION_VOTES_TIME = 'time'
 
 //#endregion POLL_JSON
 
+/* EMOJI VALUES */
+//#region EMOJI
+
+const EMOJI_HELP    = ':question:'
+const EMOJI_NEW     = ':new:'
+const EMOJI_VOTE    = ':ballot_box_with_check:'
+const EMOJI_LIST    = ':notepad_spiral:'
+const EMOJI_VIEW    = ':mag_right:'
+const EMOJI_ERROR   = ':no_entry_sign:'
+
+const EMOJI_WELCOME = ':wave:'
+const EMOJI_UNKNOWN = ':mag_right:'
+
+//#endregion EMOJI
+
 //#endregion CONSTANTS
 
 
@@ -118,16 +133,17 @@ const POLL_JSON_OPTION_VOTES_TIME = 'time'
 
 /**
  * Handles what happens when the help action is called
- * @param {string} userID The ID of the user
+ * 
+ * @param {string} userID    The ID of the user
  * @param {string} channelID The ID of the channel
  */
 function handleHelp(userID, channelID) {
-    var message = "> " + mentionUser(userID) + ", here are some commands you can run:\n"
-    message += "> * `!poll help`: Displays this message\n"
-    message += "> * `!poll new/create poll_name opt1 opt2...`: Creates a new poll for this channel with the name '`poll_name`' and options '`opt1`' and '`opt2`' (can create from 0 to as many options as you want)\n"
-    message += "> * `!poll vote poll_name opt1 opt2`: Votes for options '`opt1`' and '`opt2`' in the poll '`poll_name`'. You can have from 1 to as many options as you like, given the poll allows for multiple votes\n"
-    message += "> * `!poll list`: List all of the active polls for this channel\n"
-    message += "> * `!poll view poll_name`: Views the settings, the options, and the number of votes per option for an active poll in this channel with the name '`poll_name`'\n"
+    let message = "> **Help**  " + EMOJI_HELP + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> " + EMOJI_HELP + " `!poll help`:\tDisplays this message\n"
+    message += "> " + EMOJI_NEW  + " `!poll new/create poll_name opt1 opt2...`:\tCreates a new poll for this channel with the name '`poll_name`' and options '`opt1`' and '`opt2`' (can create from 0 to as many options as you want)\n"
+    message += "> " + EMOJI_VOTE + " `!poll vote poll_name opt1 opt2`:\tVotes for options '`opt1`' and '`opt2`' in the poll '`poll_name`'. You can have from 1 to as many options as you like, given the poll allows for multiple votes\n"
+    message += "> " + EMOJI_LIST + " `!poll list`:\tList all of the active polls for this channel\n"
+    message += "> " + EMOJI_VIEW + " `!poll view poll_name`:\tViews the settings, the options, and the number of votes per option for an active poll in this channel with the name '`poll_name`'\n"
 
     sendMessage(channelID, message)
 }
@@ -142,6 +158,7 @@ function handleHelp(userID, channelID) {
 
 /**
  * Returns text that will mention a user
+ * 
  * @param {string} userID The user which to mention
  */
 function mentionUser(userID) {
@@ -151,8 +168,9 @@ function mentionUser(userID) {
 
 /**
  * Sends the passed-in message to the passed-in channel
+ * 
  * @param {string} channelID The ID of the channel
- * @param {string} message The message to send
+ * @param {string} message   The message to send
  */
 function sendMessage(channelID, message) {
     bot.sendMessage({
@@ -164,13 +182,16 @@ function sendMessage(channelID, message) {
 
 /**
  * Draws from a preset list of error messages depending on the ErrorCode
- * @param {string} userID The user which to mention
- * @param {string} channelID The channel to send the message in
+ * 
+ * @param {string}      userID    The user which to mention
+ * @param {string}      channelID The channel to send the message in
  * @param {ERROR_CODES} errorCode The error code to send the appropriate message
- * @param {string[]} args Any additional argument(s) for the given error message
+ * @param {string[]}    args      Any additional argument(s) for the given error message
  */
 function errorMessage(userID, channelID, errorCode, args = ['']) {
-    let message = (function(code, args) {
+    let message = "> **Error**  " + EMOJI_ERROR + "  (" + mentionUser(userID) + ")\n> \n> "
+
+    message += (function(code, args) {
         switch (code) {
             case ERROR_CODES.BADDEST:
                 return 'Uh oh, you did a fucky wucky'
@@ -199,60 +220,64 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
         }
     })(errorCode, args)
 
-    message = "> " + mentionUser(userID) + ' ' + message
-
     sendMessage(channelID, message)
 }
 
 /**
  * Outputs a message upon succesfully voting for something
- * @param {string} channelID The channel
- * @param {string} userID The channel
- * @param {string} pollName The name of the poll
- * @param {string[]} votes The succesful votes
+ * 
+ * @param {string}   channelID The channel
+ * @param {string}   userID    The channel
+ * @param {string}   pollName  The name of the poll
+ * @param {string[]} votes     The succesful votes
  */
 function messageSuccesfulVotes(channelID, userID, pollName, votes) {
-    var text = '> ' + mentionUser(userID) + ', you successfully voted in `' + pollName + '` for the following options:'
+    let message = "> **Vote**  " + EMOJI_VOTE + "  (" + mentionUser(userID) + ")\n> \n"
+    message += '> You successfully voted in `' + pollName + '` for the following options:'
 
     votes.forEach(vote => {
-        text += '\n>  * `' + vote + '`'
+        message += '\n>  * `' + vote + '`'
     });
 
-    sendMessage(channelID, text)
+    sendMessage(channelID, message)
 }
 
 /**
- * Outputs a message when a user tries to vote for an option they already voted for
- * @param {string} channelID The ID of the channel
- * @param {string} userID The ID of the user
- * @param {string} pollName The name of the poll
- * @param {string[]} votes The votes that were already voted for
+ * Outputs a message when a user tries to vote for an option they already voted
+ * 
+ * @param {string}   channelID The ID of the channel
+ * @param {string}   userID    The ID of the user
+ * @param {string}   pollName  The name of the poll
+ * @param {string[]} votes     The votes that were already voted for
  */
 function messageAlreadyVoted(channelID, userID, pollName, votes) {
-    var text = '> ' + mentionUser(userID) + ', you already voted in `' + pollName + '` for the following options:'
+    let message = "> **Vote**  " + EMOJI_VOTE + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> You already voted in `" + pollName + "` for the following options:"
 
     votes.forEach(vote => {
-        text += '\n>  * `' + vote + '`'
+        message += '\n>  * `' + vote + '`'
     });
 
-    sendMessage(channelID, text)
+    sendMessage(channelID, message)
 }
 
 /**
  * Outputs a message when a user tries to vote for an option that doesn't exist
- * @param {string} channelID The ID of the channel
- * @param {string} userID The ID of the user
- * @param {string} pollName The name of the poll
- * @param {string[]} votes The options that don't exist
+ * 
+ * @param {string}   channelID The ID of the channel
+ * @param {string}   userID    The ID of the user
+ * @param {string}   pollName  The name of the poll
+ * @param {string[]} votes     The options that don't exist
  */
 function messageVotesDontExist(channelID, userID, pollName, votes) {
-    var text = '> ' + mentionUser(userID) + ', the following options don\'t exist in `' + pollName + '`:'
+    let message = "> **Vote**  " + EMOJI_VOTE + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> The following options don't exist in `" + pollName + "`:"
 
     votes.forEach(vote => {
-        text += '\n>  * `' + vote + '`'
+        message += '\n>  * `' + vote + '`'
     });
 
-    sendMessage(channelID, text)
+    sendMessage(channelID, message)
 }
 
 //#endregion MESSAGES
@@ -266,6 +291,7 @@ function messageVotesDontExist(channelID, userID, pollName, votes) {
 /**
  * Returns all of the active polls as a JSON object.
  * If it doesn't exist, it creates a new one
+ * 
  * @returns {JSON} The polls as a JSON object
  */
 function getActivePolls() {
@@ -284,6 +310,7 @@ function getActivePolls() {
 
 /**
  * Gets all of the active polls for the given channel
+ * 
  * @param {string} channelID The channel ID
  */
 function getActiveChannelPolls(channelID) {
@@ -297,8 +324,10 @@ function getActiveChannelPolls(channelID) {
 
 /**
  * Returns the JSON the poll if it exists for this channel, false otherwise
- * @param {string} pollName The name of the poll
+ * 
+ * @param {string} pollName  The name of the poll
  * @param {string} channelID The ID of the channel
+ * 
  * @returns {JSON, boolean} the JSON the poll if it exists for this channel, false otherwise
  */
 function getActivePoll(pollName, channelID) {
@@ -316,6 +345,7 @@ function getActivePoll(pollName, channelID) {
 
 /**
  * Saves the passed-in polls data in the polls file
+ * 
  * @param {JSON} polls The polls data in the JSON format
  */
 function writeActivePolls(polls)
@@ -329,9 +359,10 @@ function writeActivePolls(polls)
 
 /**
  * Writes the polls to the polls_active.json file
+ * 
  * @param {string} channelID The string ID for the given channel
- * @param {string} pollName The name of the poll
- * @param {JSON} poll The poll as a JSON object
+ * @param {string} pollName  The name of the poll
+ * @param {JSON}   poll      The poll as a JSON object
  */
 function saveActivePoll(channelID, pollName, poll)
 {
@@ -355,10 +386,11 @@ function saveActivePoll(channelID, pollName, poll)
 /**
  * Creates the poll if one with the same name doesn't already exist in this channel
  * TODO: Decide if we are going to be returning error values or not
- * @param {string} pollName The name of the poll
- * @param {string} userID The user that is creating the poll
- * @param {string} channelID The channel in which the poll is being created
- * @param {HTMLAllCollection} options The options for the poll
+ * 
+ * @param {string}            pollName  The name of the poll
+ * @param {string}            userID    The user that is creating the poll
+ * @param {string}            channelID The channel in which the poll is being created
+ * @param {HTMLAllCollection} options   The options for the poll
  */
 function createNewPoll(pollName, userID, channelID, options = []) {
 
@@ -407,9 +439,10 @@ function createNewPoll(pollName, userID, channelID, options = []) {
 
 /**
  * Handles creating a new poll
- * @param {string} userID The user who started the poll
- * @param {string} channelID The channel in which the poll is started
- * @param {string[]} args The arguments to go along with the poll
+ * 
+ * @param {string}   userID    The user who started the poll
+ * @param {string}   channelID The channel in which the poll is started
+ * @param {string[]} args      The arguments to go along with the poll
  */
 function handleNewPoll(userID, channelID, args) {
     // Check to see if correct arguments were passed in
@@ -434,20 +467,22 @@ function handleNewPoll(userID, channelID, args) {
 
 /**
  * Outputs a list of all of the active polls
+ * 
  * @param {string} channelID The channel from which to grab the polls
  */
 function handleListActivePolls(userID, channelID) {
     const polls = getActiveChannelPolls(channelID)
 
-    var text = mentionUser(userID) + " all active polls for this channel:"
+    let message = "> **List**  " + EMOJI_LIST + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> All active polls for this channel:"
 
     console.log(JSON.stringify(polls))
 
-    for (let poll in polls) {
-        text += "\n* `" + poll + "`"
+    for (const poll in polls) {
+        message += "\n> * `" + poll + "`"
     }
 
-    sendMessage(channelID, text)
+    sendMessage(channelID, message)
 }
 
 //#endregion LIST_POLLS
@@ -460,13 +495,12 @@ function handleListActivePolls(userID, channelID) {
 
 /**
  * Returns the information on how the voting for a given poll
- * @param {string} userID The user who made the request
- * @param {string} channelID The channel
- * @param {string[]} args The arguments for viewing this poll
+ * 
+ * @param {string}   userID    The user who made the request
+ * @param {string}   channelID The channel
+ * @param {string[]} args      The arguments for viewing this poll
  */
 function handleViewPoll(userID, channelID, args) {
-    console.log("handleViewPoll with args: " + JSON.stringify(args))
-
     // Check to see if arguments were passed in
     if (args.length < 1) {
         errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
@@ -483,15 +517,17 @@ function handleViewPoll(userID, channelID, args) {
     }
 
     // Start the text to be output
-    var text = "> View Poll " + mentionUser(userID) + ":\n> " + pollName
+    let message = "> **View**  " + EMOJI_VIEW + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> Settings:\n> TODO: Alex get this working later\n"
+    message += "> Options:"
 
     // List all of the options and how many votes each one has received
     const options = poll[POLL_JSON_OPTIONS]
     options.forEach(option => {
-        text += "\n>  * `" + option[POLL_JSON_OPTION_NAME] + "`: " + option[POLL_JSON_OPTION_VOTES].length
+        message += "\n>  * `" + option[POLL_JSON_OPTION_NAME] + "`: " + option[POLL_JSON_OPTION_VOTES].length
     })
 
-    sendMessage(channelID, text)
+    sendMessage(channelID, message)
 }
 
 //#endregion VIEW_POLLS
@@ -503,8 +539,10 @@ function handleViewPoll(userID, channelID, args) {
 
 /**
  * Returns true if a given option exists in a poll; false otherwise
- * @param {JSON} poll The name of the poll
+ * 
+ * @param {JSON}   poll   The name of the poll
  * @param {string} option The option to check
+ * 
  * @returns {boolean} true if the given option exists in a poll; false otherwise
  */
 function doesOptionExistInPoll(poll, option) {
@@ -520,7 +558,8 @@ function doesOptionExistInPoll(poll, option) {
 
 /**
  * Checks to see if the user has voted (for any option) in the poll
- * @param {JSON} poll The poll in which to check 
+ * 
+ * @param {JSON}   poll   The poll in which to check 
  * @param {string} userID The user to check if has voted 
  */
 function hasVotedInPoll(poll, userID) {
@@ -539,7 +578,8 @@ function hasVotedInPoll(poll, userID) {
 
 /**
  * Checks to see if the user has voted for a given option in a given poll
- * @param {JSON} poll The poll in which to check
+ * 
+ * @param {JSON}   poll   The poll in which to check
  * @param {string} userID The user to see if has voted
  * @param {string} option The option
  */
@@ -571,10 +611,11 @@ function hasVotedForOption(poll, userID, option) {
 
 /**
  * Votes in the poll with the given votes
- * @param {JSON} poll The poll in which to vote
- * @param {string[]} votes The options to vote for in the poll
- * @param {string} userID The id of the user
- * @param {string} channelID the id of the channel
+ * 
+ * @param {JSON}     poll      The poll in which to vote
+ * @param {string[]} votes     The options to vote for in the poll
+ * @param {string}   userID    The id of the user
+ * @param {string}   channelID The id of the channel
  */
 function voteInPoll(poll, votes, userID, channelID) {
     // Keep track of the succesful votes to output at the end
@@ -627,9 +668,10 @@ function voteInPoll(poll, votes, userID, channelID) {
 
 /**
  * Handles voting in a poll
- * @param {string} userID The user who is voting
+ * 
+ * @param {string} userID    The user who is voting
  * @param {string} channelID The channel in which poll is
- * @param {string} args The arguments for voting
+ * @param {string} args      The arguments for voting
  */
 function handleVoting(userID, channelID, args) {
     // Check to see if correct arguments were passed in
@@ -660,9 +702,10 @@ function handleVoting(userID, channelID, args) {
 
 /**
  * Handles ending a poll
- * @param {string} userID The user that ended the poll
+ * 
+ * @param {string} userID    The user that ended the poll
  * @param {string} channelID The channel in which the poll is taking place
- * @param {string} args The arguments about the poll
+ * @param {string} args      The arguments about the poll
  */
 function handleEndPoll(userID, channelID, args) {
     errorMessage(userID, channelID, ERROR_CODES.DEVS_SUCK)
@@ -672,9 +715,10 @@ function handleEndPoll(userID, channelID, args) {
 
 /**
  * Takes care of the input
- * @param {string} userID The user that sent the input
- * @param {string} channelID The channel in which the messgae was sent
- * @param {string[]} args The arguments passed in
+ * 
+ * @param {string}   userID    The user that sent the input
+ * @param {string}   channelID The channel in which the messgae was sent
+ * @param {string[]} args      The arguments passed in
  */
 function handleInput(userID, channelID, args) {
 
