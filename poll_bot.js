@@ -126,29 +126,24 @@ const EMOJI_UNKNOWN = ':mag_right:'
 //#endregion CONSTANTS
 
 
-/* **** *
- * HELP *
- * **** */
-//#region HELP
+/* ************* *
+ * MISCELLANEOUS *
+ * ************* */
+//#region MISCELLANEOUS
 
 /**
- * Handles what happens when the help action is called
+ * Checks to see if the passed-in user id is the owner of this poll
  * 
- * @param {string} userID    The ID of the user
- * @param {string} channelID The ID of the channel
+ * @param {JSON}   poll   The poll to check
+ * @param {string} userID The id of the user to check
+ * 
+ * @returns {boolean} If the passed-in user is the owner of the poll
  */
-function handleHelp(userID, channelID) {
-    let message = "> **Help**  " + EMOJI_HELP + "  (" + mentionUser(userID) + ")\n> \n"
-    message += "> " + EMOJI_HELP + " `!poll help`:\tDisplays this message\n"
-    message += "> " + EMOJI_NEW  + " `!poll new/create poll_name opt1 opt2...`:\tCreates a new poll for this channel with the name '`poll_name`' and options '`opt1`' and '`opt2`' (can create from 0 to as many options as you want)\n"
-    message += "> " + EMOJI_VOTE + " `!poll vote poll_name opt1 opt2`:\tVotes for options '`opt1`' and '`opt2`' in the poll '`poll_name`'. You can have from 1 to as many options as you like, given the poll allows for multiple votes\n"
-    message += "> " + EMOJI_LIST + " `!poll list`:\tList all of the active polls for this channel\n"
-    message += "> " + EMOJI_VIEW + " `!poll view poll_name`:\tViews the settings, the options, and the number of votes per option for an active poll in this channel with the name '`poll_name`'\n"
-
-    sendMessage(channelID, message)
+function isOwnerOfPoll(poll, userID) {
+    return poll['owner'] == userID
 }
 
-//#endregion HELP
+//#endregion MISCELLANEOUS
 
 
 /* ******** *
@@ -215,6 +210,8 @@ function errorMessage(userID, channelID, errorCode, args = ['']) {
                 return 'Dude, `' + args[0] + '` is not a valid option'
             case ERROR_CODES.BAD_POLL_NAME:
                 return 'Yo, \'' + args[0] + '\' is a bad poll name'
+            case ERROR_CODES.NOT_OWNER:
+                return 'Ya dude, nice try. You ain\'t the owner of this poll'
             default:
                 return 'Idk what went wrong G'
         }
@@ -387,10 +384,10 @@ function saveActivePoll(channelID, pollName, poll)
  * Creates the poll if one with the same name doesn't already exist in this channel
  * TODO: Decide if we are going to be returning error values or not
  * 
- * @param {string}            pollName  The name of the poll
- * @param {string}            userID    The user that is creating the poll
- * @param {string}            channelID The channel in which the poll is being created
- * @param {HTMLAllCollection} options   The options for the poll
+ * @param {string}   pollName  The name of the poll
+ * @param {string}   userID    The user that is creating the poll
+ * @param {string}   channelID The channel in which the poll is being created
+ * @param {string[]} options   The options for the poll
  */
 function createNewPoll(pollName, userID, channelID, options = []) {
 
@@ -451,7 +448,7 @@ function handleNewPoll(userID, channelID, args) {
         return
     }
 
-    const name = args[0].toLowerCase()
+    const name = args[0]
     args = args.splice(1)
 
     createNewPoll(name, userID, channelID, args)
@@ -518,7 +515,7 @@ function handleViewPoll(userID, channelID, args) {
 
     // Start the text to be output
     let message = "> **View**  " + EMOJI_VIEW + "  (" + mentionUser(userID) + ")\n> \n"
-    message += "> Settings:\n> TODO: Alex get this working later\n"
+    message += "> Settings:\n>  * Multiple votes: `" + poll['settings']['multiple_votes'] + "`\n> \n"
     message += "> Options:"
 
     // List all of the options and how many votes each one has received
@@ -531,6 +528,7 @@ function handleViewPoll(userID, channelID, args) {
 }
 
 //#endregion VIEW_POLLS
+
 
 /* ****** *
  * VOTING *
@@ -695,6 +693,109 @@ function handleVoting(userID, channelID, args) {
 //#endregion VOTING
 
 
+/* **** *
+ * HELP *
+ * **** */
+//#region HELP
+
+/**
+ * Handles what happens when the help action is called
+ * 
+ * @param {string} userID    The ID of the user
+ * @param {string} channelID The ID of the channel
+ */
+function handleHelp(userID, channelID) {
+    let message = "> **Help**  " + EMOJI_HELP + "  (" + mentionUser(userID) + ")\n> \n"
+    message += "> " + EMOJI_HELP + " `!poll help`:\tDisplays this message\n"
+    message += "> " + EMOJI_NEW  + " `!poll new/create poll_name opt1 opt2...`:\tCreates a new poll for this channel with the name '`poll_name`' and options '`opt1`' and '`opt2`' (can create from 0 to as many options as you want)\n"
+    message += "> " + EMOJI_VOTE + " `!poll vote poll_name opt1 opt2`:\tVotes for options '`opt1`' and '`opt2`' in the poll '`poll_name`'. You can have from 1 to as many options as you like, given the poll allows for multiple votes\n"
+    message += "> " + EMOJI_LIST + " `!poll list`:\tList all of the active polls for this channel\n"
+    message += "> " + EMOJI_VIEW + " `!poll view poll_name`:\tViews the settings, the options, and the number of votes per option for an active poll in this channel with the name '`poll_name`'\n"
+
+    sendMessage(channelID, message)
+}
+
+//#endregion HELP
+
+
+/* **** *
+ * EDIT *
+ * **** */
+//#region EDIT
+
+/**
+ * Adds an option to the poll
+ * 
+ * @param {JSON}     poll      The poll object
+ * @param {string}   userID    The id of the user
+ * @param {string}   channelID The channel id
+ * @param {string[]} args      An array of arguments passed in
+ */
+function addOptionToPoll(poll, userID, channelID, args)
+{
+    // Check if there are a correct number of arguments
+    if (args.length < 1) {
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    // Get the name of the option
+    let option_name = args[0]
+    
+}
+
+/**
+ * Logic to edit polls
+ * 
+ * @param {string}   userID    The id of the user who is attempting to edit
+ * @param {string}   channelID The id of the channel
+ * @param {string[]} args      Various args that are passed-in with this (poll name, etc.)
+ */
+function handleEdit(userID, channelID, args) {
+
+    // Check if there are a correct amount of arguments
+    if (args.length < 1) { // TODO: Change this once we've figured out the structure of editing polls
+        errorMessage(userID, channelID, ERROR_CODES.MISSING_PARAM)
+        return
+    }
+
+    // Get the poll
+    const pollName = args[0]
+    let poll = getActivePoll(pollName, channelID)
+    if (!poll) {
+        errorMessage(userID, channelID, ERROR_CODES.POLL_NOT_EXISTS, [pollName])
+        return
+    }
+
+    // Check if the user is the owner of the poll
+    if (!isOwnerOfPoll(poll, userID)) {
+        errorMessage(userID, channelID, ERROR_CODES.NOT_OWNER)
+        return
+    }
+
+    // Figure out which edit command was passed in, and do the appropriate action
+    let cmd = args[0]
+    cmd = cmd.toLowerCase()
+    args = args.splice[1]
+    
+    switch (cmd) {
+        case 'new':
+        case 'add':
+            addOptionToPoll(poll, userID, channelID, args)
+            break;
+
+        case 'remove':
+        case 'delete':
+            removeOptionFromPoll(poll, userID, channelID, args)
+        
+        default:
+            break;
+    }
+}
+
+//#endregion EDIT
+
+
 /* ********* *
  * END POLLS *
  * ********* */
@@ -764,6 +865,10 @@ function handleInput(userID, channelID, args) {
             break
         case 'help':
             handleHelp(userID, channelID)
+            break
+        case 'edit':
+        case 'settings':
+            handleEdit(userID, channelID, args)
             break
         default:
             errorMessage(userID, channelID, ERROR_CODES.UNKNOWN_PARAM)

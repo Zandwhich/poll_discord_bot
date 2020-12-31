@@ -10,5 +10,6 @@
     "CANT_READ_FILE": 8,
     "OPTION_EXISTS": 9,
     "OPTION_NOT_EXISTS": 10,
-    "BAD_POLL_NAME": 11
+    "BAD_POLL_NAME": 11,
+    "NOT_OWNER": 12
 }
