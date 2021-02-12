@@ -107,3 +107,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# VSCode:
+.vscode
+
+# nohup stuff:
+nohup.out
